@@ -1,0 +1,50 @@
+[run]
+output_dir = "../runs/example"
+rounds = 3
+statements_per_round = 1000
+replay_rounds = 3
+seed = 0
+conjecture_multiplier = 1
+conjecture_threshold = 0.25
+training_proof_threshold = 0.5
+
+[model]
+# Set this to a Hugging Face causal language model or a local checkpoint.
+name = "REPLACE_WITH_CAUSAL_LM"
+tokenizer = "REPLACE_WITH_CAUSAL_LM"
+max_sequence_length = 1024
+max_new_tokens = 1024
+generation_batch_size = 8
+embedding_batch_size = 8
+train_microbatch_size = 1
+gradient_accumulation_steps = 32
+epochs = 1
+learning_rate = 0.00005
+weight_decay = 0.01
+warmup_steps = 5
+gradient_checkpointing = true
+
+[solver]
+kind = "llm"
+attempts_per_statement = 32
+temperature = 1.0
+top_p = 1.0
+
+# Used only when kind = "alphaproof". The command must implement the JSONL
+# batch contract documented in README.md.
+alphaproof_command = ["python", "-m", "alphaproof.inference.batch"]
+alphaproof_run_dir = "../../AlphaProof/runs/0"
+alphaproof_num_simulations = 250
+alphaproof_num_sampled_actions = 6
+alphaproof_timeout_seconds = 3600.0
+
+[lean]
+project_dir = "../../AlphaProof/lean_project"
+imports = ["Mathlib"]
+workers = 8
+timeout_seconds = 200.0
+
+[data]
+dataset_config = "datasets/leanworkbook.json"
+# Optional. May contain prompt/target records or formal_statement/proof records.
+# sft_dataset = "../data/sft.jsonl"

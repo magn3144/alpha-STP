@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "alpha-stp"
+version = "0.1.0"
+description = "Single-GPU PyTorch implementation of the Self-play Theorem Prover"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "alphaproof",
+    "leantree",
+    "numpy>=2.0.0",
+    "torch==2.12.1",
+    "tqdm>=4.67.0",
+    "transformers",
+]
+
+[project.scripts]
+stp = "stp.cli:main"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.400",
+]
+
+[tool.uv.sources]
+alphaproof = { path = "../AlphaProof", editable = true }
+leantree = { path = "../AlphaProof/vendor/leantree", editable = true }
+transformers = { git = "https://github.com/huggingface/transformers.git" }
+torch = [
+    { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+
+[tool.uv.workspace]
+exclude = ["../AlphaProof"]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stp"]
+
+[tool.pyright]
+include = ["src/stp"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"
