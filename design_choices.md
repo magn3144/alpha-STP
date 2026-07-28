@@ -1,0 +1,1 @@
+- In the original STP code the training and generation prompt for the conjecturer is slightly different. That might be a mistake, so I have chosen to make the two prompts consistent.

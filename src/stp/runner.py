@@ -9,7 +9,7 @@ from typing import Sequence
 from stp.algorithm import (
     assess_conjectures,
     build_training_examples,
-    conjecture_prompt,
+    conjecturer_generation_prompt,
     deduplicate_training_examples,
     make_requests,
     parse_conjecture,
@@ -130,7 +130,11 @@ def _generate_conjectures(
     shared_name = ""
     shared_statement = "theorem true : True"
     prompts = [
-        conjecture_prompt(source.statement, proof, shared_statement)
+        conjecturer_generation_prompt(
+            shared_statement,
+            source.statement,
+            proof,
+        )
         for source, proof in sources
     ]
     outputs = generate_texts(

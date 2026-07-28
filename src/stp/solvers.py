@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Sequence, cast
 
-from stp.algorithm import deduplicate_attempts, parse_proof, proof_prompt
+from stp.algorithm import deduplicate_attempts, parse_proof, prover_prompt
 from stp.config import Config
 from stp.data import alphaproof_theorem
 from stp.lean import verify_attempts
@@ -18,7 +18,9 @@ def solve_with_llm(
 ) -> list[SolveAttempt]:
     """Generate whole proofs and verify unique completions with LeanTree."""
 
-    prompts = [proof_prompt(request.statement, request.header) for request in requests]
+    prompts = [
+        prover_prompt(request.statement, request.header) for request in requests
+    ]
     outputs = generate_texts(
         runtime,
         prompts,

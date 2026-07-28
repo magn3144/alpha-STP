@@ -1,0 +1,4 @@
+Changes to make:
+- The generator should generate several conjectures. How many it generates can be controlled as a hyperparameter. Then screen_conjectures should return a list with just the first conjecture and rank_conjectures should just return the first element in the list (not as a list) for now.
+- Use the folder structure stp/ instead of src/stp/
+- I want there to be three main files in stp/. Those should be stp_loop.py, generate.py and train.py. stp_loop is the outer loop that chooses problems, asks the conjecturer to generate conejctures, asks the solver to solve them, call a function to calculate the scores for the conjectures and calls the training script, to train the conjecturer and solver. These scripts should be relatively minimal, by delegating the details to other scripts. For example loading data, storing data, calculating scores, etc.

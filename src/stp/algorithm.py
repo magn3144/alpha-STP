@@ -18,64 +18,88 @@ from stp.records import (
 Candidate = TypeVar("Candidate")
 
 
-START_LEMMA = "<lemma>"
-START_EASY_THEOREM = "<easy theorem>"
-START_HARD_THEOREM = "<hard theorem>"
-END_HARD_THEOREM = "</hard theorem>"
-PROVER_HEADER = (
-    "Complete the following Lean 4 code:\n\n```lean4\n"
-    "import Mathlib\n"
+START_LEMMA_STMT = "<easy theorem>"
+START_THM = "<hard theorem>"
+END_THM = "</hard theorem>"
+INVOKED_LEMMA = "<lemma>"
+LEAN_CODE_PROMPT = "Complete the following Lean 4 code:\n\n```lean4\n"
+PROVER_PROMPT = (
+    LEAN_CODE_PROMPT
+    + "import Mathlib\n"
     "import Aesop\n"
     "set_option maxHeartbeats 0\n"
     "open BigOperators Real Nat Topology Rat\n"
 )
 
 
-def proof_prompt(statement: str, header: str | None) -> str:
-    """Build a whole-proof generation prompt."""
+def prover_prompt(statement: str, header: str | None) -> str:
+    """Build the original STP whole-proof prompt."""
 
-    prefix = "Complete the following Lean 4 code:\n\n```lean4\n"
-    return prefix + header + statement if header is not None else PROVER_HEADER + statement
+    if header is not None:
+        return LEAN_CODE_PROMPT + header + statement.strip()
+    return f"{PROVER_PROMPT}\n{statement.strip()}"
 
 
-def conjecture_prompt(
-    easy_statement: str,
-    easy_proof: str,
+def _conjecturer_prompt(
     shared_lemma_statement: str,
+    seed_statement: str,
+    seed_proof: str,
 ) -> str:
-    """Build the original STP easy-to-hard conjecture prompt."""
+    """Build the shared paper-style conjecturer prompt prefix."""
 
+    easy_theorem = seed_statement + seed_proof
     return (
-        PROVER_HEADER
-        + f"{START_LEMMA}\n{shared_lemma_statement.strip()}\n"
-        + f"{START_EASY_THEOREM}\n{easy_statement.strip()}\n"
-        + f"{easy_proof.strip()}\n{START_HARD_THEOREM}\n theorem"
+        LEAN_CODE_PROMPT
+        + f"{INVOKED_LEMMA}\n{shared_lemma_statement.strip()}\n"
+        + f"{START_LEMMA_STMT}\n{easy_theorem.strip()}\n"
+        + START_THM
     )
 
 
-def conjecture_training_prompt(conjecture: Conjecture) -> str:
-    """Build the causal prompt used to train conjecture generation."""
+def conjecturer_generation_prompt(
+    shared_lemma_statement: str,
+    seed_statement: str,
+    seed_proof: str,
+) -> str:
+    """Build the conjecturer prompt used for autoregressive generation."""
 
-    return conjecture_prompt(
-        conjecture.easy_statement,
-        conjecture.easy_proof,
-        conjecture.shared_lemma_statement,
-    ).removesuffix(" theorem")
+    return (
+        _conjecturer_prompt(
+            shared_lemma_statement,
+            seed_statement,
+            seed_proof,
+        )
+        + "\n theorem"
+    )
+
+
+def conjecturer_training_prompt(
+    shared_lemma_statement: str,
+    seed_statement: str,
+    seed_proof: str,
+) -> str:
+    """Build the same conjecturer prefix used for target-only training."""
+
+    return _conjecturer_prompt(
+        shared_lemma_statement,
+        seed_statement,
+        seed_proof,
+    )
 
 
 def parse_proof(text: str) -> str:
     """Extract a tactic proof from a model completion."""
 
-    return text.split("\n```", 1)[0].strip()
+    return text.split("\n```", 1)[0]
 
 
 def parse_conjecture(text: str) -> str:
     """Extract a theorem declaration and append the empty `by` proof."""
 
-    statement = "theorem " + text.split(END_HARD_THEOREM, 1)[0].strip()
+    statement = "theorem " + text.split(END_THM, 1)[0].strip()
     if ":=" in statement:
-        statement = statement.split(":=", 1)[0].rstrip()
-    return statement + " := by"
+        statement = statement.split(":=", 1)[0]
+    return statement + ":= by"
 
 
 def make_requests(
@@ -288,7 +312,7 @@ def build_training_examples(
         ) / success_counts[attempt.statement_id]
         examples.append(
             TrainingExample(
-                prompt=proof_prompt(statement.statement, statement.header),
+                prompt=prover_prompt(statement.statement, statement.header),
                 target=attempt.proof,
                 weight=weight,
                 kind="proof",
@@ -304,11 +328,15 @@ def build_training_examples(
             conjecture_seen.add(statement.id)
             target = (
                 f"\n{statement.statement.removesuffix(':= by').strip()}\n"
-                f"{END_HARD_THEOREM}"
+                f"{END_THM}"
             )
             examples.append(
                 TrainingExample(
-                    prompt=conjecture_training_prompt(statement),
+                    prompt=conjecturer_training_prompt(
+                        statement.shared_lemma_statement,
+                        statement.easy_statement,
+                        statement.easy_proof,
+                    ),
                     target=target,
                     weight=1.0,
                     kind="conjecture",

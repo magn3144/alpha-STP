@@ -100,6 +100,23 @@ def unload_runtime(runtime: ModelRuntime) -> None:
     torch.cuda.empty_cache()
 
 
+def right_truncate_prompt(
+    prompt: str,
+    tokenizer: Any,
+    max_tokens: int,
+) -> str:
+    """Apply the original STP truncate-decode prompt preprocessing."""
+
+    tokens = tokenizer.encode(
+        prompt,
+        return_tensors="pt",
+        padding="longest",
+        max_length=max_tokens,
+        truncation=True,
+    )[0]
+    return tokenizer.decode(tokens, skip_special_tokens=True)
+
+
 def generate_texts(
     runtime: ModelRuntime,
     prompts: Sequence[str],
@@ -115,15 +132,22 @@ def generate_texts(
         range(0, len(prompts), settings.generation_batch_size),
         desc="Generating",
     ):
-        batch_prompts = prompts[start : start + settings.generation_batch_size]
+        batch_prompts = [
+            right_truncate_prompt(
+                prompt,
+                runtime.tokenizer,
+                settings.max_sequence_length,
+            )
+            for prompt in prompts[
+                start : start + settings.generation_batch_size
+            ]
+        ]
         batch_seeds = seeds[start : start + settings.generation_batch_size]
         torch.manual_seed(batch_seeds[0])
         encoded = runtime.tokenizer(
             list(batch_prompts),
             return_tensors="pt",
             padding=True,
-            truncation=True,
-            max_length=settings.max_sequence_length,
         ).to("cuda")
         input_length = encoded["input_ids"].shape[1]
         started = time.perf_counter()

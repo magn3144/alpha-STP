@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from stp.algorithm import proof_prompt
+from stp.algorithm import prover_prompt
 from stp.records import Statement, TrainingExample
 from stp.storage import read_json
 
@@ -92,7 +92,7 @@ def load_sft_examples(path: Path | None) -> list[TrainingExample]:
             statement_id = stable_id(prompt)
         else:
             statement = canonical_statement(raw["formal_statement"])
-            prompt = proof_prompt(statement, raw.get("header"))
+            prompt = prover_prompt(statement, raw.get("header"))
             target = str(raw["proof"]).strip()
             statement_id = stable_id((raw.get("header") or "") + statement)
         examples.append(
