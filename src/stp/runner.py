@@ -13,9 +13,10 @@ from stp.algorithm import (
     deduplicate_training_examples,
     make_requests,
     parse_conjecture,
+    prepare_conjecture_inputs,
     rank_conjectures,
     screen_conjectures,
-    select_conjecture_sources,
+    select_conjecture_training_examples,
     select_dataset_statements,
     wasserstein_matching,
 )
@@ -25,6 +26,11 @@ from stp.data import (
     load_sft_examples,
     load_statements,
     stable_id,
+)
+from stp.declarations import (
+    declaration_manifest_path,
+    load_declaration_map,
+    validate_declaration_artifact,
 )
 from stp.model import (
     ModelRuntime,
@@ -37,6 +43,8 @@ from stp.model import (
 from stp.records import (
     Conjecture,
     ConjectureAssessment,
+    ConjectureFilterMetric,
+    ConjectureInput,
     RoundState,
     SolveAttempt,
     Statement,
@@ -88,102 +96,117 @@ def _previous_assessments(
     return list(best.values())
 
 
-def _conjecture_level(labels: Sequence[str]) -> int:
-    """Read the current generated-conjecture depth from labels."""
+def _historical_attempts(
+    config: Config,
+    round_index: int,
+) -> list[SolveAttempt]:
+    """Load solver attempts from every completed earlier round."""
 
-    levels = [
-        int(label.split()[-1])
-        for label in labels
-        if label.startswith("conjecture ")
-    ]
-    return max(levels, default=0)
+    attempts = []
+    for previous in range(round_index):
+        path = _round_dir(config, previous) / "solve_attempts.jsonl"
+        if path.exists():
+            attempts.extend(load_records(path, SolveAttempt))
+    return attempts
+
+
+def _unproved_statements(
+    statements: Sequence[Statement],
+    assessments: Sequence[ConjectureAssessment],
+) -> list[Statement]:
+    """Return dataset statements with no historical successful proof."""
+
+    proved = {
+        assessment.statement_id
+        for assessment in assessments
+        if assessment.successes > 0
+    }
+    return [statement for statement in statements if statement.id not in proved]
 
 
 def _generate_conjectures(
     config: Config,
     round_index: int,
-    selected: Sequence[Statement],
+    inputs: Sequence[ConjectureInput],
+    statements: Sequence[Statement],
+    maximum: int,
     runtime: ModelRuntime,
 ) -> list[Conjecture]:
-    """Generate new hard conjectures from the previous round's easy proofs."""
+    """Generate, deduplicate, screen, rank, and budget conjectures."""
 
-    if round_index == 0:
-        return []
-    previous_dir = _round_dir(config, round_index - 1)
-    previous_pool = _load_pool(previous_dir)
-    previous_attempts = load_records(
-        previous_dir / "solve_attempts.jsonl",
-        SolveAttempt,
-    )
-    previous_assessments = load_records(
-        previous_dir / "assessments.jsonl",
-        ConjectureAssessment,
-    )
-    sources = select_conjecture_sources(
-        previous_pool,
-        previous_attempts,
-        previous_assessments,
-        len(selected),
-        config.run.seed + round_index,
-    )
-    sources = sources * config.run.conjecture_multiplier
-    shared_name = ""
-    shared_statement = "theorem true : True"
+    generation_inputs = [
+        conjecture_input
+        for _ in range(config.run.conjecture_multiplier)
+        for conjecture_input in inputs
+    ]
     prompts = [
         conjecturer_generation_prompt(
-            shared_statement,
-            source.statement,
-            proof,
+            conjecture_input.shared_lemma_statement,
+            conjecture_input.seed_statement,
+            conjecture_input.seed_proof,
         )
-        for source, proof in sources
+        for conjecture_input in generation_inputs
     ]
     outputs = generate_texts(
         runtime,
         prompts,
         [
-            config.run.seed + round_index * 1_000_000 + index
-            for index in range(len(prompts))
+            conjecture_input.generation_seed
+            + sample * len(inputs)
+            for sample in range(config.run.conjecture_multiplier)
+            for conjecture_input in inputs
         ],
         config.model,
         config.solver.temperature,
         config.solver.top_p,
     )
-    existing = {statement.id for statement in selected}
+    existing = {statement.id for statement in statements}
     conjectures = []
-    for (source, proof), (text, _, _) in zip(sources, outputs, strict=True):
+    for conjecture_input, (text, _, _) in zip(
+        generation_inputs,
+        outputs,
+        strict=True,
+    ):
         statement = canonical_statement(parse_conjecture(text))
-        conjecture_id = stable_id((source.header or "") + statement)
+        conjecture_id = stable_id(
+            (conjecture_input.header or "") + statement
+        )
         if conjecture_id in existing:
             continue
         existing.add(conjecture_id)
-        level = _conjecture_level(source.labels) + 1
         conjectures.append(
             Conjecture(
                 id=conjecture_id,
+                conjecture_input_id=conjecture_input.id,
                 statement=statement,
-                easy_statement=source.statement,
-                easy_proof=proof,
-                shared_lemma=shared_name,
-                shared_lemma_statement=shared_statement,
-                header=source.header,
+                easy_statement=conjecture_input.seed_statement,
+                easy_proof=conjecture_input.seed_proof,
+                shared_lemma=conjecture_input.shared_lemma,
+                shared_lemma_statement=(
+                    conjecture_input.shared_lemma_statement
+                ),
+                header=conjecture_input.header,
                 labels=tuple(
                     label
-                    for label in source.labels
+                    for label in conjecture_input.labels
                     if not label.startswith("conjecture ")
                 )
-                + (f"conjecture {level}",),
+                + ("conjecture 1",),
             )
         )
-    return rank_conjectures(screen_conjectures(conjectures))
+    rng = random.Random(config.run.seed + round_index)
+    rng.shuffle(conjectures)
+    screened = screen_conjectures(conjectures)
+    return rank_conjectures(screened)[:maximum]
 
 
-def _replay_training_examples(
+def _replay_prover_examples(
     config: Config,
     round_index: int,
 ) -> list[TrainingExample]:
-    """Build new training examples from the configured replay window."""
+    """Build prover examples from the configured replay window."""
 
-    examples = load_sft_examples(config.data.sft_dataset)
+    examples = []
     first = max(0, round_index - config.run.replay_rounds + 1)
     for replay_round in range(first, round_index + 1):
         round_dir = _round_dir(config, replay_round)
@@ -203,7 +226,6 @@ def _replay_training_examples(
                 assessments,
                 replay_round,
                 config.run.training_proof_threshold,
-                config.run.conjecture_threshold,
             )
         )
     return deduplicate_training_examples(examples)
@@ -219,8 +241,8 @@ def _match_conjecture_examples(
     """Project hard-conjecture examples toward the source distribution."""
 
     candidates = [example for example in examples if example.kind == "conjecture"]
-    if not candidates:
-        return list(examples)
+    if not candidates or not statements:
+        return []
     runtime = load_runtime(model_path, tokenizer_path)
     candidate_embeddings = embed_texts(
         runtime,
@@ -238,10 +260,12 @@ def _match_conjecture_examples(
         candidate_embeddings,
         target_embeddings,
         [statement.matching_weight for statement in statements],
+        config.run.wasserstein_max_weight,
     )
-    retained = [example for example in examples if example.kind != "conjecture"]
-    retained.extend(replace(example, weight=weight) for example, weight in matched)
-    return retained
+    return [
+        replace(example, weight=weight)
+        for example, weight in matched
+    ]
 
 
 def _git_revision(repository: Path) -> dict[str, str | bool]:
@@ -268,7 +292,13 @@ def write_manifest(config: Config) -> None:
     """Record code, Lean, model, and configuration provenance once."""
 
     path = config.run.output_dir / "manifest.json"
+    validate_declaration_artifact(config)
     if path.exists():
+        manifest = read_json(path)
+        if manifest.get("artifact_schema") != 2:
+            raise ValueError(
+                "Run artifacts use an unsupported schema. Start a new run."
+            )
         return
     repository = Path(__file__).resolve().parents[2]
     alphaproof = repository.parent / "AlphaProof"
@@ -282,6 +312,7 @@ def write_manifest(config: Config) -> None:
     write_json(
         path,
         {
+            "artifact_schema": 2,
             "stp": _git_revision(repository),
             "alphaproof": _git_revision(alphaproof),
             "leantree": _git_revision(alphaproof / "vendor/leantree"),
@@ -289,6 +320,11 @@ def write_manifest(config: Config) -> None:
             "lean_project": str(config.lean.project_dir),
             "base_model": config.model.name,
             "solver": config.solver.kind,
+            "theorem_declarations": read_json(
+                declaration_manifest_path(
+                    config.data.theorem_declarations
+                )
+            ),
         },
     )
     shutil.copy2(config.path, config.run.output_dir / "config.toml")
@@ -307,13 +343,14 @@ def run_round(config: Config, round_index: int) -> RoundState:
         return RoundState(**values)
 
     statements = load_statements(config.data.dataset_config)
+    previous_assessments = _previous_assessments(config, round_index)
     selected_path = round_dir / "selected.jsonl"
     if selected_path.exists():
         selected = load_records(selected_path, Statement)
     else:
         selected = select_dataset_statements(
             statements,
-            _previous_assessments(config, round_index),
+            previous_assessments,
             config.run.statements_per_round,
             config.run.seed + round_index,
         )
@@ -324,16 +361,43 @@ def run_round(config: Config, round_index: int) -> RoundState:
         config.model.tokenizer if round_index == 0 else model_path
     )
     runtime: ModelRuntime | None = None
+    selected_unproved = _unproved_statements(
+        selected,
+        previous_assessments,
+    )
+    input_path = round_dir / "conjecture_inputs.jsonl"
+    if input_path.exists():
+        conjecture_inputs = load_records(input_path, ConjectureInput)
+    elif round_index == 0:
+        conjecture_inputs = []
+        write_jsonl(input_path, conjecture_inputs)
+    else:
+        declarations = load_declaration_map(config)
+        conjecture_inputs = prepare_conjecture_inputs(
+            statements,
+            _historical_attempts(config, round_index),
+            previous_assessments,
+            declarations,
+            len(selected_unproved),
+            config.run.trivial_lemma_probability,
+            config.run.lemma_input_cap_fraction,
+            config.run.seed + round_index,
+        )
+        del declarations
+        write_jsonl(input_path, conjecture_inputs)
+
     conjecture_path = round_dir / "conjectures.jsonl"
     if conjecture_path.exists():
         conjectures = load_records(conjecture_path, Conjecture)
     else:
-        if round_index > 0:
+        if conjecture_inputs:
             runtime = load_runtime(model_path, tokenizer_path)
             conjectures = _generate_conjectures(
                 config,
                 round_index,
-                selected,
+                conjecture_inputs,
+                statements,
+                len(selected_unproved),
                 runtime,
             )
         else:
@@ -381,14 +445,57 @@ def run_round(config: Config, round_index: int) -> RoundState:
     if training_path.exists():
         training_examples = load_records(training_path, TrainingExample)
     else:
-        training_examples = _replay_training_examples(config, round_index)
-        training_examples = _match_conjecture_examples(
-            config,
-            training_examples,
-            statements,
-            model_path,
-            tokenizer_path,
+        conjecture_training_path = (
+            round_dir / "conjecture_training_examples.jsonl"
         )
+        filter_metrics_path = (
+            round_dir / "conjecture_filter_metrics.jsonl"
+        )
+        if conjecture_training_path.exists():
+            conjecture_training = load_records(
+                conjecture_training_path,
+                TrainingExample,
+            )
+            filter_metrics = load_records(
+                filter_metrics_path,
+                ConjectureFilterMetric,
+            )
+        else:
+            unweighted, filter_metrics = (
+                select_conjecture_training_examples(
+                    conjectures,
+                    attempts,
+                    assessments,
+                    round_index,
+                    config.run.conjecture_threshold,
+                    config.run.elegance_drop_fraction,
+                    config.run.unfocused_example_ratio,
+                    config.run.unfocused_example_minimum,
+                    config.run.seed + round_index,
+                )
+            )
+            unproved_after_round = _unproved_statements(
+                statements,
+                [*previous_assessments, *assessments],
+            )
+            conjecture_training = _match_conjecture_examples(
+                config,
+                unweighted,
+                unproved_after_round,
+                model_path,
+                tokenizer_path,
+            )
+            write_jsonl(filter_metrics_path, filter_metrics)
+            write_jsonl(
+                conjecture_training_path,
+                conjecture_training,
+            )
+        training_examples = [
+            *load_sft_examples(config.data.sft_dataset),
+            *_replay_prover_examples(config, round_index),
+            *conjecture_training,
+        ]
+        training_examples = deduplicate_training_examples(training_examples)
         write_jsonl(training_path, training_examples)
 
     checkpoint = round_dir / "checkpoint"
@@ -423,6 +530,11 @@ def run_round(config: Config, round_index: int) -> RoundState:
             "solver_seconds": sum(item.duration_seconds for item in attempts),
             "verification_seconds": sum(
                 item.verify_seconds for item in attempts
+            ),
+            "conjecture_inputs": len(conjecture_inputs),
+            "conjecture_examples": sum(
+                example.kind == "conjecture"
+                for example in training_examples
             ),
         },
     )

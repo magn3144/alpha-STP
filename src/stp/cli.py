@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from stp.config import load_config
+from stp.declarations import build_declaration_artifact
 from stp.runner import evaluate, run, run_round
 
 
@@ -25,6 +26,12 @@ def _parser() -> argparse.ArgumentParser:
     )
     evaluate_parser.add_argument("--config", type=Path, required=True)
     evaluate_parser.add_argument("--checkpoint", type=Path, required=True)
+
+    declarations_parser = commands.add_parser(
+        "declarations",
+        help="Build theorem declarations for the configured Lean project",
+    )
+    declarations_parser.add_argument("--config", type=Path, required=True)
     return parser
 
 
@@ -37,6 +44,8 @@ def main() -> None:
         result = [state.__dict__ for state in run(config)]
     elif args.command == "round":
         result = run_round(config, args.round).__dict__
-    else:
+    elif args.command == "evaluate":
         result = evaluate(config, args.checkpoint)
+    else:
+        result = build_declaration_artifact(config)
     print(json.dumps(result, indent=2))

@@ -5,6 +5,7 @@ from typing import Any, Sequence, cast
 from stp.algorithm import deduplicate_attempts, parse_proof, prover_prompt
 from stp.config import Config
 from stp.data import alphaproof_theorem
+from stp.declarations import load_declaration_names
 from stp.lean import verify_attempts
 from stp.model import ModelRuntime, generate_texts
 from stp.records import ProofRequest, SolveAttempt, SolveStatus
@@ -50,7 +51,13 @@ def solve_with_llm(
         )
     ]
     unique = deduplicate_attempts(attempts)
-    return verify_attempts(unique, requests, config.lean)
+    declaration_names = load_declaration_names(config)
+    return verify_attempts(
+        unique,
+        requests,
+        config.lean,
+        declaration_names,
+    )
 
 
 def solve_with_alphaproof(
@@ -117,4 +124,17 @@ def solve_with_alphaproof(
                 metrics=dict(value.get("metrics", {})),
             )
         )
-    return deduplicate_attempts(attempts)
+    attempts = deduplicate_attempts(attempts)
+    proved = [attempt for attempt in attempts if attempt.status == "proved"]
+    declaration_names = load_declaration_names(config)
+    verified = verify_attempts(
+        proved,
+        requests,
+        config.lean,
+        declaration_names,
+    )
+    verified_by_id = {attempt.request_id: attempt for attempt in verified}
+    return [
+        verified_by_id.get(attempt.request_id, attempt)
+        for attempt in attempts
+    ]

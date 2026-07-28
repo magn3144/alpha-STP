@@ -18,10 +18,37 @@ class Statement:
 
 
 @dataclass(frozen=True)
+class TheoremDeclaration:
+    """A fully qualified theorem name and its proof-free declaration."""
+
+    full_name: str
+    statement: str
+
+
+@dataclass(frozen=True)
+class ConjectureInput:
+    """One paper-style lemma-guided input to the conjecturer."""
+
+    id: str
+    seed_statement_id: str
+    seed_statement: str
+    seed_proof: str
+    source_attempt_id: str
+    shared_lemma: str
+    shared_lemma_statement: str
+    trivial_lemma: bool
+    header: str | None
+    labels: tuple[str, ...]
+    matching_weight: float
+    generation_seed: int
+
+
+@dataclass(frozen=True)
 class Conjecture:
     """A generated hard statement paired with its easy source problem."""
 
     id: str
+    conjecture_input_id: str
     statement: str
     easy_statement: str
     easy_proof: str
@@ -58,6 +85,7 @@ class SolveAttempt:
     duration_seconds: float
     generated_tokens: int
     verify_seconds: float
+    invoked_lemmas: tuple[str, ...] = ()
     multiplicity: int = 1
     metrics: dict[str, Any] = field(default_factory=dict)
 
@@ -72,6 +100,21 @@ class ConjectureAssessment:
     attempts: int
     successes: int
     metrics: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ConjectureFilterMetric:
+    """Paper-style filtering diagnostics for one generated conjecture."""
+
+    statement_id: str
+    pass_rate: float
+    successes: int
+    trivial_lemma: bool
+    named_lemma_reused: bool
+    minimum_proof_length: int | None
+    elegance_score: float | None
+    selected: bool
+    rejection_reason: str | None
 
 
 @dataclass(frozen=True)

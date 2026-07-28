@@ -16,6 +16,12 @@ class RunSettings:
     conjecture_multiplier: int
     conjecture_threshold: float
     training_proof_threshold: float
+    trivial_lemma_probability: float
+    lemma_input_cap_fraction: float
+    elegance_drop_fraction: float
+    unfocused_example_ratio: int
+    unfocused_example_minimum: int
+    wasserstein_max_weight: float
 
 
 @dataclass(frozen=True)
@@ -68,6 +74,7 @@ class DataSettings:
 
     dataset_config: Path
     sft_dataset: Path | None
+    theorem_declarations: Path
 
 
 @dataclass(frozen=True)
@@ -113,6 +120,24 @@ def load_config(path: Path) -> Config:
             conjecture_multiplier=int(run["conjecture_multiplier"]),
             conjecture_threshold=float(run["conjecture_threshold"]),
             training_proof_threshold=float(run["training_proof_threshold"]),
+            trivial_lemma_probability=float(
+                run.get("trivial_lemma_probability", 0.5)
+            ),
+            lemma_input_cap_fraction=float(
+                run.get("lemma_input_cap_fraction", 0.1)
+            ),
+            elegance_drop_fraction=float(
+                run.get("elegance_drop_fraction", 0.2)
+            ),
+            unfocused_example_ratio=int(
+                run.get("unfocused_example_ratio", 20)
+            ),
+            unfocused_example_minimum=int(
+                run.get("unfocused_example_minimum", 4096)
+            ),
+            wasserstein_max_weight=float(
+                run.get("wasserstein_max_weight", 3.0)
+            ),
         ),
         model=ModelSettings(
             name=str(model["name"]),
@@ -158,6 +183,10 @@ def load_config(path: Path) -> Config:
                 _path(base, inputs["sft_dataset"])
                 if "sft_dataset" in inputs
                 else None
+            ),
+            theorem_declarations=_path(
+                base,
+                inputs["theorem_declarations"],
             ),
         ),
     )

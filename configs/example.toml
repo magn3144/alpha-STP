@@ -7,6 +7,12 @@ seed = 0
 conjecture_multiplier = 1
 conjecture_threshold = 0.25
 training_proof_threshold = 0.5
+trivial_lemma_probability = 0.5
+lemma_input_cap_fraction = 0.1
+elegance_drop_fraction = 0.2
+unfocused_example_ratio = 20
+unfocused_example_minimum = 4096
+wasserstein_max_weight = 3.0
 
 [model]
 # Set this to a Hugging Face causal language model or a local checkpoint.
@@ -46,5 +52,6 @@ timeout_seconds = 200.0
 
 [data]
 dataset_config = "datasets/leanworkbook.json"
+theorem_declarations = "../data/theorem_declarations.jsonl"
 # Optional. May contain prompt/target records or formal_statement/proof records.
 # sft_dataset = "../data/sft.jsonl"

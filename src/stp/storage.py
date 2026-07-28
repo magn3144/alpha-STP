@@ -54,7 +54,12 @@ def load_records(path: Path, record_type: type[Record]) -> list[Record]:
     records = []
     for value in read_jsonl(path):
         values = {key: item for key, item in value.items() if key in names}
-        for name in ("labels", "alphaproof_command", "imports"):
+        for name in (
+            "labels",
+            "invoked_lemmas",
+            "alphaproof_command",
+            "imports",
+        ):
             if name in values:
                 values[name] = tuple(values[name])
         records.append(record_type(**values))
