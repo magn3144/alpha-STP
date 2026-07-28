@@ -1,3 +1,5 @@
+"""Immutable STP configuration records."""
+
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path

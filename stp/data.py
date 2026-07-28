@@ -1,17 +1,19 @@
+"""Dataset loading and normalization."""
+
 import hashlib
 import json
 import re
 from pathlib import Path
 from typing import Any
 
-from stp.algorithm import prover_prompt
+from stp.prompts import prover_prompt
 from stp.records import Statement, TrainingExample
 from stp.storage import read_json
 
 
 BY_SUFFIX = re.compile(r":=\s*by\s*$")
 ASSIGN_SUFFIX = re.compile(r":=\s*$")
-REPOSITORY = Path(__file__).resolve().parents[2]
+REPOSITORY = Path(__file__).resolve().parents[1]
 
 
 def stable_id(value: str) -> str:

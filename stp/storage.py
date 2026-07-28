@@ -1,3 +1,5 @@
+"""JSON and round-artifact storage."""
+
 import json
 import os
 from dataclasses import fields

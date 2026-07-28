@@ -1,15 +1,45 @@
+"""LLM and AlphaProof solver adapters."""
+
+from dataclasses import replace
 import subprocess
 from pathlib import Path
 from typing import Any, Sequence, cast
 
-from stp.algorithm import deduplicate_attempts, parse_proof, prover_prompt
 from stp.config import Config
 from stp.data import alphaproof_theorem
 from stp.declarations import load_declaration_names
 from stp.lean import verify_attempts
 from stp.model import ModelRuntime, generate_texts
+from stp.prompts import parse_proof, prover_prompt
 from stp.records import ProofRequest, SolveAttempt, SolveStatus
 from stp.storage import read_jsonl, write_jsonl
+
+
+def deduplicate_attempts(
+    attempts: Sequence[SolveAttempt],
+) -> list[SolveAttempt]:
+    """Collapse identical outputs while preserving multiplicity."""
+
+    positions: dict[tuple[str, str | None, str], int] = {}
+    result: list[SolveAttempt] = []
+    for attempt in attempts:
+        key = (attempt.statement_id, attempt.proof, attempt.status)
+        if key in positions:
+            index = positions[key]
+            result[index] = replace(
+                result[index],
+                duration_seconds=(
+                    result[index].duration_seconds + attempt.duration_seconds
+                ),
+                generated_tokens=(
+                    result[index].generated_tokens + attempt.generated_tokens
+                ),
+                multiplicity=result[index].multiplicity + attempt.multiplicity,
+            )
+        else:
+            positions[key] = len(result)
+            result.append(attempt)
+    return result
 
 
 def solve_with_llm(

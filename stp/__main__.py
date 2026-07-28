@@ -1,3 +1,5 @@
+"""Run the STP command-line interface."""
+
 from stp.cli import main
 
 

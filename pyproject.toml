@@ -42,10 +42,10 @@ url = "https://download.pytorch.org/whl/cu126"
 explicit = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/stp"]
+packages = ["stp"]
 
 [tool.pyright]
-include = ["src/stp"]
+include = ["stp"]
 pythonVersion = "3.13"
 typeCheckingMode = "standard"
 venvPath = "."

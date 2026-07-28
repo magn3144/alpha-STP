@@ -1,10 +1,12 @@
+"""STP command-line interface."""
+
 import argparse
 import json
 from pathlib import Path
 
 from stp.config import load_config
 from stp.declarations import build_declaration_artifact
-from stp.runner import evaluate, run, run_round
+from stp.stp_loop import evaluate, run, run_round
 
 
 def _parser() -> argparse.ArgumentParser:

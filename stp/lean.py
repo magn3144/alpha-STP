@@ -1,3 +1,5 @@
+"""Lean proof verification and dependency extraction."""
+
 import json
 import re
 import time

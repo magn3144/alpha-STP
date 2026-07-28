@@ -1,3 +1,5 @@
+"""Immutable STP data records."""
+
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 

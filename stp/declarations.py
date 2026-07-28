@@ -1,3 +1,5 @@
+"""Lean theorem-declaration artifact generation."""
+
 import json
 import subprocess
 import tempfile
@@ -31,7 +33,7 @@ def declaration_provenance(config: Config) -> dict[str, Any]:
     """Describe the Lean environment used by the declaration artifact."""
 
     mathlib = config.lean.project_dir / ".lake" / "packages" / "mathlib"
-    repository = Path(__file__).resolve().parents[2]
+    repository = Path(__file__).resolve().parents[1]
     return {
         "lean_toolchain": (
             config.lean.project_dir / "lean-toolchain"
