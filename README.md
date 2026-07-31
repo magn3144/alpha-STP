@@ -44,3 +44,21 @@ attempts with invoked lemmas, filter diagnostics, weighted conjecturer
 examples, complete training set, and next Hugging Face checkpoint under the
 configured output directory. The declaration command must be rerun after the
 Lean project, Mathlib revision, or imported modules change.
+
+## Numina evaluation
+
+Evaluate both a Hugging Face causal LLM and AlphaProof on the problems in
+`data/dataset/numina_sft_evaluation/test.jsonl` with:
+
+```bash
+uv run python scripts/evaluate_numina.py \
+  --config configs/example.toml \
+  --llm-model YOUR_MODEL_OR_CHECKPOINT
+```
+
+Use `--llm-tokenizer` when the tokenizer lives at a different path. The script
+always samples 32 LLM proofs per problem and performs one AlphaProof search
+using the budget in the config. It creates a timestamped directory under
+`data/evaluations` containing `llm_proof_attempts.jsonl`,
+`alphaproof_search_trees.jsonl`, and `difficulty_scores.jsonl`. Repeated LLM
+outputs are stored once with their count in the `multiplicity` field.
