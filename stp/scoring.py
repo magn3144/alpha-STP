@@ -14,7 +14,7 @@ Candidate = TypeVar("Candidate")
 def calculate_scores(
     attempts: Sequence[SolveAttempt],
 ) -> list[ConjectureAssessment]:
-    """Calculate original STP solve-rate difficulty scores."""
+    """Calculate LLM solve rates or AlphaProof frontier scores."""
 
     grouped: dict[str, list[SolveAttempt]] = defaultdict(list)
     for attempt in attempts:
@@ -22,6 +22,31 @@ def calculate_scores(
 
     assessments = []
     for statement_id, group in grouped.items():
+        if group[0].solver == "alphaproof":
+            if len(group) != 1:
+                raise ValueError(
+                    "AlphaProof must run exactly once per statement."
+            )
+            metric = {
+                key: group[0].metrics[key]
+                for key in (
+                    "solved_frontier_nodes",
+                    "total_frontier_nodes",
+                    "solve_rate",
+                )
+            }
+            assessments.append(
+                ConjectureAssessment(
+                    statement_id=statement_id,
+                    method="alphaproof_hardest_subproblem",
+                    score=float(metric["solve_rate"]),
+                    attempts=1,
+                    successes=int(group[0].status == "proved"),
+                    metrics=metric,
+                )
+            )
+            continue
+
         total = sum(item.multiplicity for item in group)
         solved = sum(
             item.multiplicity for item in group if item.status == "proved"

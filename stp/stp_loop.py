@@ -110,9 +110,14 @@ def run_round(config: Config, round_index: int) -> RoundState:
 
     # 3. Ask the configured solver to prove data and conjectures.
     pool: list[Statement | Conjecture] = [*selected, *conjectures]
+    solver_attempts = (
+        config.solver.attempts_per_statement
+        if config.solver.kind == "llm"
+        else 1
+    )
     requests = make_proof_requests(
         pool,
-        config.solver.attempts_per_statement,
+        solver_attempts,
         config.run.seed + round_index * 10_000_000,
     )
     request_path = directory / "proof_requests.jsonl"
@@ -203,9 +208,14 @@ def evaluate(config: Config, checkpoint: Path) -> dict[str, int | float | str]:
     directory = config.run.output_dir / "evaluation" / stamp
     directory.mkdir(parents=True)
     statements = load_statements(config.data.dataset_config)
+    solver_attempts = (
+        config.solver.attempts_per_statement
+        if config.solver.kind == "llm"
+        else 1
+    )
     requests = make_proof_requests(
         statements,
-        config.solver.attempts_per_statement,
+        solver_attempts,
         config.run.seed,
     )
     write_jsonl(directory / "proof_requests.jsonl", requests)
@@ -227,7 +237,7 @@ def evaluate(config: Config, checkpoint: Path) -> dict[str, int | float | str]:
         "statements": len(statements),
         "solved": solved,
         "pass_at_k": solved / len(statements),
-        "attempts_per_statement": config.solver.attempts_per_statement,
+        "attempts_per_statement": solver_attempts,
     }
     write_json(directory / "metrics.json", metrics)
     return metrics

@@ -12,6 +12,10 @@ from stp.lean import verify_attempts
 from stp.model import ModelRuntime, generate_texts
 from stp.prompts import parse_proof, prover_prompt
 from stp.records import ProofRequest, SolveAttempt, SolveStatus
+from stp.search_metrics import (
+    hardest_subproblem_solve_rate,
+    hardest_subproblem_tree,
+)
 from stp.storage import read_jsonl, write_jsonl
 
 
@@ -125,7 +129,10 @@ def solve_with_alphaproof(
         str(config.solver.alphaproof_num_simulations),
         "--num-sampled-actions",
         str(config.solver.alphaproof_num_sampled_actions),
+        "--no-stop-on-solution",
     ]
+    for module in config.lean.imports:
+        command.extend(("--import", module))
     subprocess.run(
         command,
         check=True,
@@ -135,10 +142,22 @@ def solve_with_alphaproof(
     by_id: dict[str, dict[str, Any]] = {
         str(value["request_id"]): value for value in values
     }
+    projected = [
+        {
+            "request_id": value["request_id"],
+            "tree": hardest_subproblem_tree(value["tree"]),
+        }
+        for value in values
+    ]
+    write_jsonl(
+        artifact_dir / "alphaproof_hardest_subproblem_trees.jsonl",
+        projected,
+    )
     attempts = []
     for request in requests:
         value = by_id[request.id]
         status = cast(SolveStatus, value["status"])
+        search_metrics = hardest_subproblem_solve_rate(value["tree"])
         attempts.append(
             SolveAttempt(
                 request_id=request.id,
@@ -151,7 +170,7 @@ def solve_with_alphaproof(
                 duration_seconds=float(value["duration_seconds"]),
                 generated_tokens=int(value.get("generated_tokens", 0)),
                 verify_seconds=float(value.get("verify_seconds", 0.0)),
-                metrics=dict(value.get("metrics", {})),
+                metrics=search_metrics,
             )
         )
     attempts = deduplicate_attempts(attempts)

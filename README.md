@@ -18,6 +18,12 @@ Prompt text, scoring, immutable records, artifact I/O, Lean verification,
 solver adapters, and detailed training-example transformations live in
 focused supporting modules under `stp/`.
 
+The LLM solver uses the configured number of independent proof attempts.
+AlphaProof instead performs one fixed-budget tree search per theorem, stores
+the complete AND-OR tree, and scores its hardest-subproblem OR projection by
+the fraction of proven frontier nodes. This transformation and metric live in
+`stp/search_metrics.py`; AlphaProof only returns the raw search tree.
+
 ## Running
 
 Create the version-coupled theorem declaration artifact before starting a
