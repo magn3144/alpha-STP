@@ -117,9 +117,9 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "alphaproof", marker = "sys_platform != 'darwin'", editable = "../AlphaProof" },
+    { name = "alphaproof", marker = "sys_platform != 'darwin'", editable = "../delta-proof" },
     { name = "huggingface-hub" },
-    { name = "leantree", editable = "../AlphaProof/vendor/leantree" },
+    { name = "leantree", editable = "../delta-proof/vendor/leantree" },
     { name = "numpy", specifier = ">=2.0.0" },
     { name = "torch", marker = "sys_platform != 'darwin' and sys_platform != 'linux' and sys_platform != 'win32'", specifier = "==2.12.1" },
     { name = "torch", marker = "sys_platform == 'darwin'", specifier = "==2.12.1", index = "https://download.pytorch.org/whl/cpu" },
@@ -134,7 +134,7 @@ dev = [{ name = "pyright", specifier = ">=1.1.400" }]
 [[package]]
 name = "alphaproof"
 version = "0.1.0"
-source = { editable = "../AlphaProof" }
+source = { editable = "../delta-proof" }
 dependencies = [
     { name = "accelerate", marker = "sys_platform != 'darwin'" },
     { name = "bitsandbytes", marker = "sys_platform != 'darwin'" },
@@ -645,7 +645,7 @@ wheels = [
 [[package]]
 name = "leantree"
 version = "1.0.0"
-source = { editable = "../AlphaProof/vendor/leantree" }
+source = { editable = "../delta-proof/vendor/leantree" }
 dependencies = [
     { name = "cmd2" },
     { name = "numpy" },

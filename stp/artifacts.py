@@ -106,7 +106,7 @@ def write_manifest(config: Config) -> None:
         return
 
     repository = Path(__file__).resolve().parents[1]
-    alphaproof = repository.parent / "AlphaProof"
+    alphaproof = repository.parent / "delta-proof"
     lean_version = subprocess.run(
         ["lake", "env", "lean", "--version"],
         cwd=config.lean.project_dir,

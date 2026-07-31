@@ -40,13 +40,13 @@ top_p = 1.0
 # Used only when kind = "alphaproof". The command must implement the JSONL
 # batch contract documented in README.md.
 alphaproof_command = ["python", "-m", "alphaproof.inference.infer"]
-alphaproof_run_dir = "../../AlphaProof/runs/0"
+alphaproof_run_dir = "../../delta-proof/runs/0"
 alphaproof_num_simulations = 250
 alphaproof_num_sampled_actions = 6
 alphaproof_timeout_seconds = 3600.0
 
 [lean]
-project_dir = "../../AlphaProof/lean_project"
+project_dir = "../../delta-proof/lean_project"
 imports = ["Mathlib"]
 workers = 8
 timeout_seconds = 200.0
