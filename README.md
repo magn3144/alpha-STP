@@ -61,4 +61,6 @@ always samples 32 LLM proofs per problem and performs one AlphaProof search
 using the budget in the config. It creates a timestamped directory under
 `data/evaluations` containing `llm_proof_attempts.jsonl`,
 `alphaproof_search_trees.jsonl`, and `difficulty_scores.jsonl`. Repeated LLM
-outputs are stored once with their count in the `multiplicity` field.
+outputs are stored once with their count in the `multiplicity` field. Each
+difficulty record includes separate solver, Lean verification, and total time
+in seconds for both the LLM and AlphaProof metrics.

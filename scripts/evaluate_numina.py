@@ -11,7 +11,7 @@ from stp.config import Config, load_config
 from stp.data import canonical_statement
 from stp.generate import make_proof_requests
 from stp.model import load_runtime, unload_runtime
-from stp.records import ConjectureAssessment, Statement
+from stp.records import ConjectureAssessment, SolveAttempt, Statement
 from stp.scoring import calculate_scores
 from stp.solvers import solve_with_alphaproof, solve_with_llm
 from stp.storage import read_jsonl, write_jsonl
@@ -92,19 +92,47 @@ def assessments_by_id(
     return {assessment.statement_id: assessment for assessment in assessments}
 
 
+def timing_by_id(
+    attempts: Sequence[SolveAttempt],
+) -> dict[str, tuple[float, float]]:
+    """Sum solver and verification seconds and return them by statement ID."""
+
+    timings: dict[str, tuple[float, float]] = {}
+    for attempt in attempts:
+        solver_seconds, verification_seconds = timings.get(
+            attempt.statement_id,
+            (0.0, 0.0),
+        )
+        timings[attempt.statement_id] = (
+            solver_seconds + attempt.duration_seconds,
+            verification_seconds + attempt.verify_seconds,
+        )
+    return timings
+
+
 def combine_scores(
     problems: Sequence[Statement],
     llm_scores: Sequence[ConjectureAssessment],
     alphaproof_scores: Sequence[ConjectureAssessment],
+    llm_attempts: Sequence[SolveAttempt],
+    alphaproof_attempts: Sequence[SolveAttempt],
 ) -> list[dict[str, Any]]:
     """Combine both solver assessments and return one score record per problem."""
 
     llm_by_id = assessments_by_id(llm_scores)
     alphaproof_by_id = assessments_by_id(alphaproof_scores)
+    llm_timing_by_id = timing_by_id(llm_attempts)
+    alphaproof_timing_by_id = timing_by_id(alphaproof_attempts)
     scores = []
     for problem in problems:
         llm = llm_by_id[problem.id]
         alphaproof = alphaproof_by_id[problem.id]
+        llm_solver_seconds, llm_verification_seconds = llm_timing_by_id[
+            problem.id
+        ]
+        alphaproof_solver_seconds, alphaproof_verification_seconds = (
+            alphaproof_timing_by_id[problem.id]
+        )
         if llm.attempts != LLM_ATTEMPTS:
             raise ValueError(
                 f"Expected {LLM_ATTEMPTS} LLM attempts for {problem.id}, "
@@ -116,8 +144,21 @@ def combine_scores(
                 "llm_score": llm.score,
                 "llm_attempts": llm.attempts,
                 "llm_successes": llm.successes,
+                "llm_solver_seconds": llm_solver_seconds,
+                "llm_verification_seconds": llm_verification_seconds,
+                "llm_total_seconds": (
+                    llm_solver_seconds + llm_verification_seconds
+                ),
                 "alphaproof_score": alphaproof.score,
                 "alphaproof_solved": alphaproof.successes > 0,
+                "alphaproof_solver_seconds": alphaproof_solver_seconds,
+                "alphaproof_verification_seconds": (
+                    alphaproof_verification_seconds
+                ),
+                "alphaproof_total_seconds": (
+                    alphaproof_solver_seconds
+                    + alphaproof_verification_seconds
+                ),
                 **alphaproof.metrics,
             }
         )
@@ -182,7 +223,13 @@ def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> No
     write_jsonl(output_dir / "alphaproof_search_trees.jsonl", trees)
 
     alphaproof_scores = calculate_scores(alphaproof_attempts)
-    scores = combine_scores(problems, llm_scores, alphaproof_scores)
+    scores = combine_scores(
+        problems,
+        llm_scores,
+        alphaproof_scores,
+        llm_attempts,
+        alphaproof_attempts,
+    )
     write_jsonl(output_dir / "difficulty_scores.jsonl", scores)
 
 
