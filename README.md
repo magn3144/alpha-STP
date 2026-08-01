@@ -64,3 +64,16 @@ using the budget in the config. It creates a timestamped directory under
 outputs are stored once with their count in the `multiplicity` field. Each
 difficulty record includes separate solver, Lean verification, and total time
 in seconds for both the LLM and AlphaProof metrics.
+
+To compare the proof-tree difficulty metric for one problem at AlphaProof
+budgets from 8 through 512 simulations, run:
+
+```bash
+uv run python scripts/evaluate_alphaproof_simulations.py \
+  --config configs/example.toml \
+  --problem-index 0
+```
+
+This creates a timestamped directory under `data/evaluations` with a JSONL
+summary, a line plot, and the raw and projected search-tree artifacts for each
+budget. Use `--name` to choose the directory name.

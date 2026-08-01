@@ -12,6 +12,7 @@ dependencies = [
     "alphaproof; sys_platform != 'darwin'",
     "huggingface-hub",
     "leantree",
+    "matplotlib>=3.10.0",
     "numpy>=2.0.0",
     "torch==2.12.1",
     "tqdm>=4.67.0",
