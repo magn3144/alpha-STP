@@ -21,6 +21,7 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
 EVALUATIONS_DIR = REPOSITORY / "data/evaluations"
 LLM_ATTEMPTS = 32
+ALPHAPROOF_ROLLOUTS = 250
 
 
 def parse_args() -> argparse.Namespace:
@@ -193,7 +194,11 @@ def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> No
 
     alphaproof_config = replace(
         config,
-        solver=replace(config.solver, kind="alphaproof"),
+        solver=replace(
+            config.solver,
+            kind="alphaproof",
+            alphaproof_num_simulations=ALPHAPROOF_ROLLOUTS,
+        ),
     )
     alphaproof_requests = make_proof_requests(
         problems,

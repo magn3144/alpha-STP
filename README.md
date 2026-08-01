@@ -57,8 +57,9 @@ uv run python scripts/evaluate_numina.py \
 ```
 
 Use `--llm-tokenizer` when the tokenizer lives at a different path. The script
-always samples 32 LLM proofs per problem and performs one AlphaProof search
-using the budget in the config. It creates a timestamped directory under
+samples `LLM_ATTEMPTS` proofs per problem and performs one AlphaProof search
+with `ALPHAPROOF_ROLLOUTS` rollouts. Both parameters are defined at the top of
+the script. It creates a timestamped directory under
 `data/evaluations` containing `llm_proof_attempts.jsonl`,
 `alphaproof_search_trees.jsonl`, and `difficulty_scores.jsonl`. Repeated LLM
 outputs are stored once with their count in the `multiplicity` field. Each
