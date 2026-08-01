@@ -6,7 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from stp.prompts import prover_prompt
+from stp.config import ProverHandlerName
+from stp.prover_models import training_text
 from stp.records import Statement, TrainingExample
 from stp.storage import read_json
 
@@ -81,8 +82,12 @@ def load_statements(config_path: Path) -> list[Statement]:
     return statements
 
 
-def load_sft_examples(path: Path | None) -> list[TrainingExample]:
-    """Load prompt/target or formal-statement/proof SFT examples."""
+def load_sft_examples(
+    path: Path | None,
+    handler: ProverHandlerName,
+    tokenizer: Any,
+) -> list[TrainingExample]:
+    """Load SFT examples and apply the selected model format when needed."""
 
     if path is None:
         return []
@@ -94,8 +99,13 @@ def load_sft_examples(path: Path | None) -> list[TrainingExample]:
             statement_id = stable_id(prompt)
         else:
             statement = canonical_statement(raw["formal_statement"])
-            prompt = prover_prompt(statement, raw.get("header"))
-            target = str(raw["proof"]).strip()
+            prompt, target = training_text(
+                handler,
+                statement,
+                raw.get("header"),
+                str(raw["proof"]).strip(),
+                tokenizer,
+            )
             statement_id = stable_id((raw.get("header") or "") + statement)
         examples.append(
             TrainingExample(

@@ -18,7 +18,9 @@ wasserstein_max_weight = 3.0
 # Set this to a Hugging Face causal language model or a local checkpoint.
 name = "REPLACE_WITH_CAUSAL_LM"
 tokenizer = "REPLACE_WITH_CAUSAL_LM"
+prover_handler = "stp"
 max_sequence_length = 1024
+# Used by conjecture generation. Proof generation has a separate solver limit.
 max_new_tokens = 1024
 generation_batch_size = 8
 embedding_batch_size = 8
@@ -34,6 +36,7 @@ gradient_checkpointing = true
 kind = "llm"
 # Used only by the LLM solver. AlphaProof performs one fixed-budget search.
 attempts_per_statement = 32
+prover_max_new_tokens = 8196
 temperature = 1.0
 top_p = 1.0
 

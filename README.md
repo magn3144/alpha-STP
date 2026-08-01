@@ -18,7 +18,16 @@ Prompt text, scoring, immutable records, artifact I/O, Lean verification,
 solver adapters, and detailed training-example transformations live in
 focused supporting modules under `stp/`.
 
+Proof-model prompting, sampling, answer parsing, and training formatting are
+selected by `model.prover_handler`. The available handlers are `stp`, which
+uses the original completion format, and `qwen3_numina`, which uses Qwen3's
+thinking chat template and extracts the final exact-theorem `lean4` block.
+Both expose the same normalized proof-generation interface under
+`stp/prover_models/`.
+
 The LLM solver uses the configured number of independent proof attempts.
+Its output budget is configured independently from conjecture generation with
+`solver.prover_max_new_tokens`; the example configuration uses 8196 tokens.
 AlphaProof instead performs one fixed-budget tree search per theorem, stores
 the complete AND-OR tree, and scores its hardest-subproblem OR projection by
 the fraction of proven frontier nodes. This transformation and metric live in

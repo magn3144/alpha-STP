@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 
+ProverHandlerName = Literal["stp", "qwen3_numina"]
+
+
 @dataclass(frozen=True)
 class RunSettings:
     """STP curriculum and output settings."""
@@ -32,6 +35,7 @@ class ModelSettings:
 
     name: str
     tokenizer: str
+    prover_handler: ProverHandlerName
     max_sequence_length: int
     max_new_tokens: int
     generation_batch_size: int
@@ -51,6 +55,7 @@ class SolverSettings:
 
     kind: Literal["llm", "alphaproof"]
     attempts_per_statement: int
+    prover_max_new_tokens: int
     temperature: float
     top_p: float
     alphaproof_command: tuple[str, ...]
@@ -144,6 +149,7 @@ def load_config(path: Path) -> Config:
         model=ModelSettings(
             name=str(model["name"]),
             tokenizer=str(model["tokenizer"]),
+            prover_handler=cast(ProverHandlerName, model["prover_handler"]),
             max_sequence_length=int(model["max_sequence_length"]),
             max_new_tokens=int(model["max_new_tokens"]),
             generation_batch_size=int(model["generation_batch_size"]),
@@ -159,6 +165,7 @@ def load_config(path: Path) -> Config:
         solver=SolverSettings(
             kind=cast(Literal["llm", "alphaproof"], solver["kind"]),
             attempts_per_statement=int(solver["attempts_per_statement"]),
+            prover_max_new_tokens=int(solver["prover_max_new_tokens"]),
             temperature=float(solver["temperature"]),
             top_p=float(solver["top_p"]),
             alphaproof_command=tuple(solver["alphaproof_command"]),

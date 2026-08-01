@@ -5,7 +5,7 @@ from typing import Sequence
 
 from stp.config import Config
 from stp.data import load_sft_examples
-from stp.model import train_model
+from stp.model import load_tokenizer, train_model
 from stp.records import (
     Conjecture,
     ConjectureAssessment,
@@ -42,6 +42,8 @@ def prepare_training_examples(
     if training_path.exists():
         return load_records(training_path, TrainingExample)
 
+    tokenizer = load_tokenizer(tokenizer_path)
+
     conjecture_path = directory / "conjecture_training_examples.jsonl"
     metrics_path = directory / "conjecture_filter_metrics.jsonl"
     if conjecture_path.exists():
@@ -75,8 +77,12 @@ def prepare_training_examples(
 
     examples = deduplicate_examples(
         [
-            *load_sft_examples(config.data.sft_dataset),
-            *replay_prover_examples(config, round_index),
+            *load_sft_examples(
+                config.data.sft_dataset,
+                config.model.prover_handler,
+                tokenizer,
+            ),
+            *replay_prover_examples(config, round_index, tokenizer),
             *conjecture_examples,
         ]
     )

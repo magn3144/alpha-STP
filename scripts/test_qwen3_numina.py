@@ -1,7 +1,6 @@
 """Try Qwen3-0.6B once on every Numina evaluation theorem."""
 
 import argparse
-import re
 import time
 from pathlib import Path
 from typing import Any
@@ -12,6 +11,14 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from stp.config import LeanSettings, load_config
 from stp.data import canonical_statement
 from stp.lean import verify_attempts
+from stp.prover_models.qwen3_numina import (
+    MIN_P,
+    TEMPERATURE,
+    TOP_K,
+    TOP_P,
+    chat_prompt,
+    extract_proof,
+)
 from stp.records import ProofRequest, SolveAttempt, Statement
 from stp.storage import read_jsonl
 
@@ -20,7 +27,6 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 MODEL_DIR = REPOSITORY / "models/Qwen3-0.6B"
 DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
 CONFIG_PATH = REPOSITORY / "configs/example.toml"
-LEAN4_CODE_BLOCK = re.compile(r"```lean4[ \t]*\r?\n(.*?)```", re.DOTALL)
 
 
 def positive_int(value: str) -> int:
@@ -71,38 +77,6 @@ def load_problems(path: Path) -> list[Statement]:
         )
         for value in read_jsonl(path)
     ]
-
-
-def proof_prompt(statement: str) -> str:
-    """Build one Lean completion request from a canonical theorem statement."""
-
-    return f"""Prove the Lean 4 theorem below. Your entire response must be exactly one `lean4` Markdown code block containing the complete theorem and its proof, and nothing else. Copy the theorem statement exactly. Do not use `sorry` or `admit`.
-
-Example question:
-theorem qwen_format_example (x : ℝ) : x + 0 = x := by
-
-Example answer:
-```lean4
-theorem qwen_format_example (x : ℝ) : x + 0 = x := by
-  simp
-```
-
-Theorem:
-{statement}
-"""
-
-
-def extract_proof(text: str, statement: str) -> str | None:
-    """Extract the last lean4 block and return its proof of statement, if exact."""
-
-    blocks = LEAN4_CODE_BLOCK.findall(text)
-    if not blocks:
-        return None
-    complete_proof = blocks[-1].strip()
-    if not complete_proof.startswith(statement):
-        return None
-    proof = complete_proof[len(statement) :].strip()
-    return proof or None
 
 
 def inference_device() -> tuple[torch.device, torch.dtype]:
@@ -167,24 +141,7 @@ def generate_attempts(
     for start in range(0, len(requests), batch_size):
         batch = requests[start : start + batch_size]
         prompts = [
-            tokenizer.apply_chat_template(
-                [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are an expert in mathematics and Lean 4. "
-                            "Follow the requested proof-output format exactly."
-                        ),
-                    },
-                    {
-                        "role": "user",
-                        "content": proof_prompt(request.statement),
-                    },
-                ],
-                tokenize=False,
-                add_generation_prompt=True,
-                enable_thinking=True,
-            )
+            chat_prompt(request.statement, request.header, tokenizer)
             for request in batch
         ]
         encoded = tokenizer(
@@ -198,9 +155,10 @@ def generate_attempts(
             generated = model.generate(
                 **encoded,
                 do_sample=True,
-                temperature=0.6,
-                top_p=0.95,
-                top_k=20,
+                temperature=TEMPERATURE,
+                top_p=TOP_P,
+                top_k=TOP_K,
+                min_p=MIN_P,
                 max_new_tokens=max_new_tokens,
                 pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.eos_token_id,

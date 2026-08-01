@@ -77,11 +77,7 @@ def load_runtime(
     """Load a causal model and tokenizer onto the single CUDA GPU."""
 
     policy = select_gpu_policy()
-    tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_path))
-    tokenizer.truncation_side = "left"
-    tokenizer.padding_side = "left"
-    if tokenizer.pad_token_id is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = load_tokenizer(tokenizer_path)
     model: Any = AutoModelForCausalLM.from_pretrained(
         str(model_path),
         dtype=policy.dtype,
@@ -90,6 +86,17 @@ def load_runtime(
     model.to("cuda")
     model.eval()
     return ModelRuntime(model=model, tokenizer=tokenizer, policy=policy)
+
+
+def load_tokenizer(tokenizer_path: str | Path) -> Any:
+    """Load and configure one causal-model tokenizer from its path."""
+
+    tokenizer = AutoTokenizer.from_pretrained(str(tokenizer_path))
+    tokenizer.truncation_side = "left"
+    tokenizer.padding_side = "left"
+    if tokenizer.pad_token_id is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
 
 
 def unload_runtime(runtime: ModelRuntime) -> None:
@@ -126,24 +133,30 @@ def generate_texts(
     settings: ModelSettings,
     temperature: float,
     top_p: float,
+    max_new_tokens: int | None = None,
+    top_k: int | None = None,
+    min_p: float | None = None,
+    truncate_decode: bool = True,
 ) -> list[tuple[str, int, float]]:
-    """Generate batched completions and return text, token count, and time."""
+    """Generate completions from prompts and return text, tokens, and time."""
 
     results = []
     for start in tqdm(
         range(0, len(prompts), settings.generation_batch_size),
         desc="Generating",
     ):
-        batch_prompts = [
-            right_truncate_prompt(
-                prompt,
-                runtime.tokenizer,
-                settings.max_sequence_length,
-            )
-            for prompt in prompts[
-                start : start + settings.generation_batch_size
+        batch_prompts = list(
+            prompts[start : start + settings.generation_batch_size]
+        )
+        if truncate_decode:
+            batch_prompts = [
+                right_truncate_prompt(
+                    prompt,
+                    runtime.tokenizer,
+                    settings.max_sequence_length,
+                )
+                for prompt in batch_prompts
             ]
-        ]
         batch_seeds = seeds[start : start + settings.generation_batch_size]
         torch.manual_seed(batch_seeds[0])
         encoded = runtime.tokenizer(
@@ -153,15 +166,26 @@ def generate_texts(
         ).to("cuda")
         input_length = encoded["input_ids"].shape[1]
         started = time.perf_counter()
+        generation_options: dict[str, Any] = {
+            "do_sample": temperature > 0,
+            "temperature": temperature if temperature > 0 else None,
+            "top_p": top_p if temperature > 0 else None,
+            "max_new_tokens": (
+                max_new_tokens
+                if max_new_tokens is not None
+                else settings.max_new_tokens
+            ),
+            "pad_token_id": runtime.tokenizer.pad_token_id,
+            "eos_token_id": runtime.tokenizer.eos_token_id,
+        }
+        if top_k is not None and temperature > 0:
+            generation_options["top_k"] = top_k
+        if min_p is not None and temperature > 0:
+            generation_options["min_p"] = min_p
         with torch.inference_mode():
             output = runtime.model.generate(
                 **encoded,
-                do_sample=temperature > 0,
-                temperature=temperature if temperature > 0 else None,
-                top_p=top_p if temperature > 0 else None,
-                max_new_tokens=settings.max_new_tokens,
-                pad_token_id=runtime.tokenizer.pad_token_id,
-                eos_token_id=runtime.tokenizer.eos_token_id,
+                **generation_options,
             )
         elapsed = time.perf_counter() - started
         generated = output[:, input_length:]

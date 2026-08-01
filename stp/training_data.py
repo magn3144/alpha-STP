@@ -5,10 +5,10 @@ import random
 from collections import defaultdict
 from dataclasses import replace
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Sequence
 
 from stp.artifacts import load_round_pool, round_dir
-from stp.config import Config
+from stp.config import Config, ProverHandlerName
 from stp.model import (
     embed_texts,
     load_runtime,
@@ -17,8 +17,8 @@ from stp.model import (
 from stp.prompts import (
     END_THM,
     conjecturer_training_prompt,
-    prover_prompt,
 )
+from stp.prover_models import training_text
 from stp.records import (
     Conjecture,
     ConjectureAssessment,
@@ -37,8 +37,10 @@ def build_prover_examples(
     scores: Sequence[ConjectureAssessment],
     round_index: int,
     proof_threshold: float,
+    handler: ProverHandlerName,
+    tokenizer: Any,
 ) -> list[TrainingExample]:
-    """Build weighted prover examples from verified results."""
+    """Build model-formatted prover examples from verified results."""
 
     by_id = {statement.id: statement for statement in statements}
     rates = {score.statement_id: score.score for score in scores}
@@ -65,10 +67,17 @@ def build_prover_examples(
         weight = math.exp(
             -0.001 * len(attempt.proof) - 0.01 * attempt.verify_seconds
         ) / success_counts[attempt.statement_id]
+        prompt, target = training_text(
+            handler,
+            statement.statement,
+            statement.header,
+            attempt.proof,
+            tokenizer,
+        )
         examples.append(
             TrainingExample(
-                prompt=prover_prompt(statement.statement, statement.header),
-                target=attempt.proof,
+                prompt=prompt,
+                target=target,
                 weight=weight,
                 kind="proof",
                 statement_id=statement.id,
@@ -222,6 +231,7 @@ def deduplicate_examples(
 def replay_prover_examples(
     config: Config,
     round_index: int,
+    tokenizer: Any,
 ) -> list[TrainingExample]:
     """Build prover examples from the configured replay window."""
 
@@ -242,6 +252,8 @@ def replay_prover_examples(
                 ),
                 replay_round,
                 config.run.training_proof_threshold,
+                config.model.prover_handler,
+                tokenizer,
             )
         )
     return deduplicate_examples(examples)

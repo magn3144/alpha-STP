@@ -9,8 +9,8 @@ from stp.config import Config
 from stp.data import alphaproof_theorem
 from stp.declarations import load_declaration_names
 from stp.lean import verify_attempts
-from stp.model import ModelRuntime, generate_texts
-from stp.prompts import parse_proof, prover_prompt
+from stp.model import ModelRuntime
+from stp.prover_models import generate_proofs
 from stp.records import ProofRequest, SolveAttempt, SolveStatus
 from stp.search_metrics import (
     hardest_subproblem_solve_rate,
@@ -53,17 +53,7 @@ def solve_with_llm(
 ) -> list[SolveAttempt]:
     """Generate whole proofs and verify unique completions with LeanTree."""
 
-    prompts = [
-        prover_prompt(request.statement, request.header) for request in requests
-    ]
-    outputs = generate_texts(
-        runtime,
-        prompts,
-        [request.seed for request in requests],
-        config.model,
-        config.solver.temperature,
-        config.solver.top_p,
-    )
+    outputs = generate_proofs(requests, runtime, config)
     attempts = [
         SolveAttempt(
             request_id=request.id,
@@ -72,13 +62,13 @@ def solve_with_llm(
             solver="llm",
             seed=request.seed,
             status="failed",
-            proof=parse_proof(text),
-            duration_seconds=duration,
-            generated_tokens=tokens,
+            proof=output.proof,
+            duration_seconds=output.duration_seconds,
+            generated_tokens=output.generated_tokens,
             verify_seconds=0.0,
             metrics={},
         )
-        for request, (text, tokens, duration) in zip(
+        for request, output in zip(
             requests,
             outputs,
             strict=True,
