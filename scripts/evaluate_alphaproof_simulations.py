@@ -20,6 +20,9 @@ from stp.storage import read_jsonl, write_jsonl
 REPOSITORY = Path(__file__).resolve().parents[1]
 DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
 EVALUATIONS_DIR = REPOSITORY / "data/evaluations"
+ALPHAPROOF_RUN_DIR = (
+    REPOSITORY.parent / "delta-proof/data/runs/sft_codet5p_770m_v100_32gb"
+)
 SIMULATION_BUDGETS = (8, 16, 32, 64, 128, 256, 512, 1024)
 
 
@@ -154,6 +157,13 @@ def main() -> None:
 
     args = parse_args()
     config = load_config(args.config)
+    config = replace(
+        config,
+        solver=replace(
+            config.solver,
+            alphaproof_run_dir=ALPHAPROOF_RUN_DIR,
+        ),
+    )
     problem = load_problem(DATASET_PATH, args.problem_index)
     output_dir = evaluation_directory(args.name)
     evaluate(config, problem, output_dir)
