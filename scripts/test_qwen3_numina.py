@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset", type=Path, default=DATASET_PATH)
     parser.add_argument("--config", type=Path, default=CONFIG_PATH)
     parser.add_argument("--batch-size", type=int, default=8)
-    parser.add_argument("--max-new-tokens", type=int, default=2048)
+    parser.add_argument("--max-new-tokens", type=int, default=8196)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
         "--num-problems",
