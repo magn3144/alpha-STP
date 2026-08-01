@@ -20,8 +20,7 @@ REPOSITORY = Path(__file__).resolve().parents[1]
 MODEL_DIR = REPOSITORY / "models/Qwen3-0.6B"
 DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
 CONFIG_PATH = REPOSITORY / "configs/example.toml"
-CODE_BLOCK = re.compile(r"```(?:lean4?|lean)?\s*(.*?)```", re.DOTALL)
-THINK_BLOCK = re.compile(r"<think>.*?</think>", re.DOTALL)
+LEAN4_CODE_BLOCK = re.compile(r"```lean4[ \t]*\r?\n(.*?)```", re.DOTALL)
 
 
 def positive_int(value: str) -> int:
@@ -77,35 +76,33 @@ def load_problems(path: Path) -> list[Statement]:
 def proof_prompt(statement: str) -> str:
     """Build one Lean completion request from a canonical theorem statement."""
 
-    return f"""Complete the Lean 4 theorem in the question. Follow the example format exactly: answer with only the tactic code that comes after the final `by`. Do not repeat the theorem, write another `by`, use Markdown fences, or use `sorry` or `admit`.
+    return f"""Prove the Lean 4 theorem below. Your entire response must be exactly one `lean4` Markdown code block containing the complete theorem and its proof, and nothing else. Copy the theorem statement exactly. Do not use `sorry` or `admit`.
 
 Example question:
 theorem qwen_format_example (x : ℝ) : x + 0 = x := by
 
 Example answer:
-simp
+```lean4
+theorem qwen_format_example (x : ℝ) : x + 0 = x := by
+  simp
+```
 
-Question:
-import Mathlib
-import Aesop
-set_option maxHeartbeats 0
-open BigOperators Real Nat Topology Rat
-
+Theorem:
 {statement}
+"""
 
-Answer:"""
 
+def extract_proof(text: str, statement: str) -> str | None:
+    """Extract the last lean4 block and return its proof of statement, if exact."""
 
-def extract_proof(text: str) -> str:
-    """Extract tactic code from one model response and return a Lean completion."""
-
-    text = THINK_BLOCK.sub("", text).strip()
-    blocks = CODE_BLOCK.findall(text)
-    if blocks:
-        text = blocks[-1].strip()
-    if text.startswith("by") and (len(text) == 2 or text[2].isspace()):
-        text = text[2:].lstrip()
-    return text
+    blocks = LEAN4_CODE_BLOCK.findall(text)
+    if not blocks:
+        return None
+    complete_proof = blocks[-1].strip()
+    if not complete_proof.startswith(statement):
+        return None
+    proof = complete_proof[len(statement) :].strip()
+    return proof or None
 
 
 def inference_device() -> tuple[torch.device, torch.dtype]:
@@ -225,7 +222,7 @@ def generate_attempts(
                     solver="qwen3-0.6b",
                     seed=seed,
                     status="failed",
-                    proof=extract_proof(output),
+                    proof=extract_proof(output, request.statement),
                     duration_seconds=elapsed,
                     generated_tokens=int(
                         (tokens != tokenizer.pad_token_id).sum().item()
