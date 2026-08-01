@@ -5,7 +5,7 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -R "select[gpu32gb]"
 #BSUB -R "rusage[mem=4GB]"
-#BSUB -M 32GB
+#BSUB -M 5GB
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -W 8:00
 #BSUB -o /work3/s204164/alpha-STP/data/evaluations/alphaproof_simulations_%J.out

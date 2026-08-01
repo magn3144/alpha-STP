@@ -20,7 +20,7 @@ from stp.storage import read_jsonl, write_jsonl
 REPOSITORY = Path(__file__).resolve().parents[1]
 DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
 EVALUATIONS_DIR = REPOSITORY / "data/evaluations"
-SIMULATION_BUDGETS = (8, 16, 32, 64, 128, 256, 512)
+SIMULATION_BUDGETS = (8, 16, 32, 64, 128, 256, 512, 1024)
 
 
 def parse_args() -> argparse.Namespace:
