@@ -73,10 +73,10 @@ the script. It creates a timestamped directory under
 `data/evaluations` containing `llm_generations.jsonl`,
 `alphaproof_search_trees.jsonl`, and `difficulty_scores.jsonl`. Repeated LLM
 outputs are stored once with their count in the `multiplicity` field. The
-script saves each problem after it finishes and resumes an existing evaluation
-when given the same `--name`. Each difficulty record contains one problem and
-solver score with separate solver, Lean verification, and total time in
-seconds.
+script completes both solvers for one problem before moving to the next, saves
+each solver result immediately, and resumes an existing evaluation when given
+the same `--name`. Each difficulty record contains one problem and solver score
+with separate solver, Lean verification, and total time in seconds.
 
 To compare the proof-tree difficulty metric for one problem at AlphaProof
 budgets from 8 through 512 simulations, run:

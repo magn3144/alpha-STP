@@ -132,7 +132,7 @@ def solve_attempt(value: dict[str, Any]) -> SolveAttempt:
     )
 
 
-def records_by_problem(
+def load_results_by_problem(
     path: Path,
     problem_ids: set[str],
 ) -> dict[str, dict[str, Any]]:
@@ -234,7 +234,7 @@ def append_score(
 
 
 def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> None:
-    """Run resumable per-problem solver stages and write JSONL artifacts."""
+    """Run both solvers per problem and save resumable JSONL artifacts."""
 
     problems = load_problems(DATASET_PATH)
     problem_ids = {problem.id for problem in problems}
@@ -242,10 +242,10 @@ def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> No
     alphaproof_path = output_dir / "alphaproof_search_trees.jsonl"
     scores_path = output_dir / "difficulty_scores.jsonl"
     llm_attempts_by_id = llm_attempts_by_problem(
-        records_by_problem(llm_path, problem_ids)
+        load_results_by_problem(llm_path, problem_ids)
     )
     alphaproof_attempts_by_id = alphaproof_attempts_by_problem(
-        records_by_problem(alphaproof_path, problem_ids)
+        load_results_by_problem(alphaproof_path, problem_ids)
     )
     saved_score_keys = score_keys(scores_path, problem_ids)
     for attempts_by_id in (llm_attempts_by_id, alphaproof_attempts_by_id):
@@ -266,28 +266,6 @@ def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> No
         config.run.seed,
     )
     llm_requests_by_id = requests_by_problem(llm_requests)
-    pending_llm = [
-        problem for problem in problems if problem.id not in llm_attempts_by_id
-    ]
-    if pending_llm:
-        runtime = load_runtime(model, tokenizer)
-        try:
-            for problem in pending_llm:
-                attempts = solve_with_llm(
-                    llm_requests_by_id[problem.id],
-                    runtime,
-                    llm_config,
-                )
-                record = {
-                    "problem_id": problem.id,
-                    "attempts": [record_to_dict(attempt) for attempt in attempts],
-                }
-                append_jsonl(llm_path, record)
-                llm_attempts_by_id[problem.id] = attempts
-                append_score(scores_path, attempts, saved_score_keys)
-        finally:
-            unload_runtime(runtime)
-
     alphaproof_config = replace(
         config,
         solver=replace(
@@ -302,29 +280,49 @@ def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> No
         config.run.seed,
     )
     alphaproof_requests_by_id = requests_by_problem(alphaproof_requests)
+
     for problem in problems:
+        if problem.id not in llm_attempts_by_id:
+            runtime = load_runtime(model, tokenizer)
+            try:
+                llm_attempts = solve_with_llm(
+                    llm_requests_by_id[problem.id],
+                    runtime,
+                    llm_config,
+                )
+            finally:
+                unload_runtime(runtime)
+            llm_record = {
+                "problem_id": problem.id,
+                "attempts": [
+                    record_to_dict(attempt) for attempt in llm_attempts
+                ],
+            }
+            append_jsonl(llm_path, llm_record)
+            llm_attempts_by_id[problem.id] = llm_attempts
+            append_score(scores_path, llm_attempts, saved_score_keys)
+
         if problem.id in alphaproof_attempts_by_id:
             continue
-        requests = alphaproof_requests_by_id[problem.id]
         with TemporaryDirectory(prefix="alpha-stp-evaluation-") as temporary:
             artifact_dir = Path(temporary)
-            attempts = solve_with_alphaproof(
-                requests,
+            alphaproof_attempts = solve_with_alphaproof(
+                alphaproof_requests_by_id[problem.id],
                 alphaproof_config,
                 artifact_dir,
             )
             raw_result = read_jsonl(
                 artifact_dir / "alphaproof_results.jsonl"
             )[0]
-        record = {
+        alphaproof_record = {
             "problem_id": problem.id,
             "request_id": raw_result["request_id"],
-            "attempt": record_to_dict(attempts[0]),
+            "attempt": record_to_dict(alphaproof_attempts[0]),
             "tree": raw_result["tree"],
         }
-        append_jsonl(alphaproof_path, record)
-        alphaproof_attempts_by_id[problem.id] = attempts
-        append_score(scores_path, attempts, saved_score_keys)
+        append_jsonl(alphaproof_path, alphaproof_record)
+        alphaproof_attempts_by_id[problem.id] = alphaproof_attempts
+        append_score(scores_path, alphaproof_attempts, saved_score_keys)
 
 
 def main() -> None:
