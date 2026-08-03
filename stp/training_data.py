@@ -18,7 +18,7 @@ from stp.prompts import (
     END_THM,
     conjecturer_training_prompt,
 )
-from stp.prover_models import training_text
+from stp.prover_models.registry import training_text
 from stp.records import (
     Conjecture,
     ConjectureAssessment,

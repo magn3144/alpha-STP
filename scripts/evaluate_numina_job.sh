@@ -25,4 +25,5 @@ stp declarations --config configs/example.toml
 python -u scripts/evaluate_numina.py \
     --config configs/example.toml \
     --llm-model models/Kimina-Prover-Preview-Distill-1.5B \
+    --llm-prover-handler kimina_numina \
     --name "numina-${LSB_JOBID}"

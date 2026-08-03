@@ -20,8 +20,8 @@ focused supporting modules under `stp/`.
 
 Proof-model prompting, sampling, answer parsing, and training formatting are
 selected by `model.prover_handler`. The available handlers are `stp`, which
-uses the original completion format, and `qwen3_numina`, which uses Qwen3's
-thinking chat template and extracts the final exact-theorem `lean4` block.
+uses the original completion format, and `kimina_numina`, which uses the
+Kimina-Prover chat template and extracts the final exact-theorem `lean4` block.
 Both expose the same normalized proof-generation interface under
 `stp/prover_models/`.
 
@@ -62,7 +62,8 @@ Evaluate both a Hugging Face causal LLM and AlphaProof on the problems in
 ```bash
 uv run python scripts/evaluate_numina.py \
   --config configs/example.toml \
-  --llm-model YOUR_MODEL_OR_CHECKPOINT
+  --llm-model models/Kimina-Prover-Preview-Distill-1.5B \
+  --llm-prover-handler kimina_numina
 ```
 
 Use `--llm-tokenizer` when the tokenizer lives at a different path. The script

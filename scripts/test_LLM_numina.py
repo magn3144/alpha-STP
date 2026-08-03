@@ -11,10 +11,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from stp.config import LeanSettings, load_config
 from stp.data import canonical_statement
 from stp.lean import verify_attempts
-from stp.prover_models.qwen3_numina import (
-    MIN_P,
+from stp.prover_models.kimina_numina import (
     TEMPERATURE,
-    TOP_K,
     TOP_P,
     chat_prompt,
     extract_proof,
@@ -42,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     """Parse model, dataset, config, and generation inputs and return them."""
 
     parser = argparse.ArgumentParser(
-        description="Make one Qwen3 proof attempt per Numina theorem.",
+        description="Make one Kimina-Prover attempt per Numina theorem.",
     )
     parser.add_argument("--model", type=Path, default=MODEL_DIR)
     parser.add_argument("--dataset", type=Path, default=DATASET_PATH)
@@ -125,7 +123,7 @@ def generate_attempts(
 
     requests = [
         ProofRequest(
-            id=f"qwen3-{problem.id}",
+            id=f"kimina-{problem.id}",
             statement_id=problem.id,
             statement=problem.statement,
             header=problem.header,
@@ -157,8 +155,6 @@ def generate_attempts(
                 do_sample=True,
                 temperature=TEMPERATURE,
                 top_p=TOP_P,
-                top_k=TOP_K,
-                min_p=MIN_P,
                 max_new_tokens=max_new_tokens,
                 pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.eos_token_id,

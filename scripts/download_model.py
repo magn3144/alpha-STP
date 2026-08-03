@@ -8,7 +8,7 @@ from huggingface_hub import snapshot_download
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 MODELS_DIR = REPOSITORY / "models"
-DEFAULT_MODEL_ID = "Qwen/Qwen3-0.6B"
+DEFAULT_MODEL_ID = "AI-MO/Kimina-Prover-Preview-Distill-1.5B"
 
 
 def parse_args() -> argparse.Namespace:

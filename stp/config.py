@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 
-ProverHandlerName = Literal["stp", "qwen3_numina"]
+ProverHandlerName = Literal["stp", "kimina_numina"]
 
 
 @dataclass(frozen=True)

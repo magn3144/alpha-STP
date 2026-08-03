@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from stp.config import ProverHandlerName
-from stp.prover_models import training_text
+from stp.prover_models.registry import training_text
 from stp.records import Statement, TrainingExample
 from stp.storage import read_json
 

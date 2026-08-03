@@ -5,9 +5,9 @@ import time
 from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Sequence
+from typing import Any, Sequence, cast
 
-from stp.config import Config, load_config
+from stp.config import Config, ProverHandlerName, load_config
 from stp.data import canonical_statement
 from stp.generate import make_proof_requests
 from stp.model import load_runtime, unload_runtime
@@ -38,6 +38,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--llm-tokenizer",
         help="Tokenizer name or path; defaults to the selected LLM model.",
+    )
+    parser.add_argument(
+        "--llm-prover-handler",
+        choices=("stp", "kimina_numina"),
+        help="Prompt and answer parser; defaults to config.model.prover_handler.",
     )
     parser.add_argument(
         "--name",
@@ -243,6 +248,17 @@ def main() -> None:
 
     args = parse_args()
     config = load_config(args.config)
+    if args.llm_prover_handler is not None:
+        config = replace(
+            config,
+            model=replace(
+                config.model,
+                prover_handler=cast(
+                    ProverHandlerName,
+                    args.llm_prover_handler,
+                ),
+            ),
+        )
     model, tokenizer = model_paths(args, config)
     output_dir = evaluation_directory(args.name)
     evaluate(config, model, tokenizer, output_dir)

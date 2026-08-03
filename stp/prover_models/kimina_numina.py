@@ -1,33 +1,31 @@
-"""Qwen3 Numina prover prompting, generation, and answer parsing."""
+"""Kimina Numina prover prompting, generation, and answer parsing."""
 
 import re
 from typing import Any, Sequence
 
 from stp.config import Config
 from stp.model import ModelRuntime, generate_texts
-from stp.records import ProofRequest
 from stp.prover_models.types import GeneratedProof
+from stp.records import ProofRequest
 
 
 LEAN4_CODE_BLOCK = re.compile(r"```lean4[ \t]*\r?\n(.*?)```", re.DOTALL)
 TEMPERATURE = 0.6
 TOP_P = 0.95
-TOP_K = 20
-MIN_P = 0.0
 
 
 def proof_prompt(statement: str, header: str | None) -> str:
-    """Build a Qwen3 proof request from a statement and optional header."""
+    """Build a Kimina proof request from a statement and optional header."""
 
     context = f"\nLean context:\n{header.strip()}\n" if header is not None else ""
     return f"""Prove the Lean 4 theorem below. Your entire response must be exactly one `lean4` Markdown code block containing the complete theorem and its proof, and nothing else. Copy the theorem statement exactly. Do not use `sorry` or `admit`.
 
 Example question:
-theorem qwen_format_example (x : ℝ) : x + 0 = x := by
+theorem kimina_format_example (x : ℝ) : x + 0 = x := by
 
 Example answer:
 ```lean4
-theorem qwen_format_example (x : ℝ) : x + 0 = x := by
+theorem kimina_format_example (x : ℝ) : x + 0 = x := by
   simp
 ```
 {context}
@@ -41,16 +39,13 @@ def chat_prompt(
     header: str | None,
     tokenizer: Any,
 ) -> str:
-    """Apply Qwen3 chat formatting to one statement and return prompt text."""
+    """Apply the Kimina chat template and return one formatted prompt."""
 
     return tokenizer.apply_chat_template(
         [
             {
                 "role": "system",
-                "content": (
-                    "You are an expert in mathematics and Lean 4. "
-                    "Follow the requested proof-output format exactly."
-                ),
+                "content": "You are an expert in mathematics and Lean 4.",
             },
             {
                 "role": "user",
@@ -59,7 +54,6 @@ def chat_prompt(
         ],
         tokenize=False,
         add_generation_prompt=True,
-        enable_thinking=True,
     )
 
 
@@ -69,7 +63,7 @@ def training_text(
     proof: str,
     tokenizer: Any,
 ) -> tuple[str, str]:
-    """Build a Qwen3 chat prompt and complete fenced theorem target."""
+    """Build a Kimina chat prompt and complete fenced theorem target."""
 
     target = f"```lean4\n{statement}\n{proof}\n```"
     return chat_prompt(statement, header, tokenizer), target
@@ -93,7 +87,7 @@ def generate_proofs(
     runtime: ModelRuntime,
     config: Config,
 ) -> list[GeneratedProof]:
-    """Generate Qwen3 completions and return extracted proofs with metadata."""
+    """Generate Kimina completions and return proofs with generation metadata."""
 
     outputs = generate_texts(
         runtime,
@@ -106,8 +100,6 @@ def generate_proofs(
         TEMPERATURE,
         TOP_P,
         max_new_tokens=config.solver.prover_max_new_tokens,
-        top_k=TOP_K,
-        min_p=MIN_P,
         truncate_decode=False,
     )
     return [

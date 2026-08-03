@@ -10,7 +10,7 @@ from stp.data import alphaproof_theorem
 from stp.declarations import load_declaration_names
 from stp.lean import verify_attempts
 from stp.model import ModelRuntime
-from stp.prover_models import generate_proofs
+from stp.prover_models.registry import generate_proofs
 from stp.records import ProofRequest, SolveAttempt, SolveStatus
 from stp.search_metrics import (
     hardest_subproblem_solve_rate,
