@@ -90,6 +90,7 @@ class SolveAttempt:
     invoked_lemmas: tuple[str, ...] = ()
     multiplicity: int = 1
     metrics: dict[str, Any] = field(default_factory=dict)
+    raw_output: str | None = None
 
 
 @dataclass(frozen=True)

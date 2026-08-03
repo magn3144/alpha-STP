@@ -70,11 +70,13 @@ Use `--llm-tokenizer` when the tokenizer lives at a different path. The script
 samples `LLM_ATTEMPTS` proofs per problem and performs one AlphaProof search
 with `ALPHAPROOF_ROLLOUTS` rollouts. Both parameters are defined at the top of
 the script. It creates a timestamped directory under
-`data/evaluations` containing `llm_proof_attempts.jsonl`,
+`data/evaluations` containing `llm_generations.jsonl`,
 `alphaproof_search_trees.jsonl`, and `difficulty_scores.jsonl`. Repeated LLM
-outputs are stored once with their count in the `multiplicity` field. Each
-difficulty record includes separate solver, Lean verification, and total time
-in seconds for both the LLM and AlphaProof metrics.
+outputs are stored once with their count in the `multiplicity` field. The
+script saves each problem after it finishes and resumes an existing evaluation
+when given the same `--name`. Each difficulty record contains one problem and
+solver score with separate solver, Lean verification, and total time in
+seconds.
 
 To compare the proof-tree difficulty metric for one problem at AlphaProof
 budgets from 8 through 512 simulations, run:

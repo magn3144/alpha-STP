@@ -24,10 +24,15 @@ def deduplicate_attempts(
 ) -> list[SolveAttempt]:
     """Collapse identical outputs while preserving multiplicity."""
 
-    positions: dict[tuple[str, str | None, str], int] = {}
+    positions: dict[tuple[str, str | None, str, str | None], int] = {}
     result: list[SolveAttempt] = []
     for attempt in attempts:
-        key = (attempt.statement_id, attempt.proof, attempt.status)
+        key = (
+            attempt.statement_id,
+            attempt.proof,
+            attempt.status,
+            attempt.raw_output,
+        )
         if key in positions:
             index = positions[key]
             result[index] = replace(
@@ -67,6 +72,7 @@ def solve_with_llm(
             generated_tokens=output.generated_tokens,
             verify_seconds=0.0,
             metrics={},
+            raw_output=output.raw_output,
         )
         for request, output in zip(
             requests,

@@ -49,6 +49,39 @@ def write_jsonl(path: Path, records: Iterable[object]) -> None:
     os.replace(temporary, path)
 
 
+def append_jsonl(path: Path, record: object) -> None:
+    """Append one dataclass or mapping to a JSONL path and sync it to disk."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    value = record if isinstance(record, dict) else record_to_dict(record)
+    with path.open("a", encoding="utf-8") as file:
+        file.write(json.dumps(value, ensure_ascii=False) + "\n")
+        file.flush()
+        os.fsync(file.fileno())
+
+
+def read_resumable_jsonl(path: Path) -> list[dict[str, Any]]:
+    """Read JSONL records and remove one incomplete final record after a crash."""
+
+    if not path.exists():
+        return []
+
+    records = []
+    with path.open("r+b") as file:
+        while line := file.readline():
+            if not line.strip():
+                continue
+            try:
+                records.append(json.loads(line))
+            except json.JSONDecodeError:
+                if file.read(1):
+                    raise
+                file.seek(-len(line), os.SEEK_CUR)
+                file.truncate()
+                break
+    return records
+
+
 def load_records(path: Path, record_type: type[Record]) -> list[Record]:
     """Load JSONL objects into a dataclass record type."""
 
