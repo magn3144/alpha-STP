@@ -1,4 +1,4 @@
-"""Try Qwen3-0.6B once on every Numina evaluation theorem."""
+"""Try Kimina-Prover once on every Numina evaluation theorem."""
 
 import argparse
 import time
@@ -24,7 +24,7 @@ from stp.storage import read_jsonl
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]
-MODEL_DIR = REPOSITORY / "models/Qwen3-0.6B"
+MODEL_DIR = REPOSITORY / "models/Kimina-Prover-Preview-Distill-1.5B"
 DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
 CONFIG_PATH = REPOSITORY / "configs/example.toml"
 
@@ -177,7 +177,7 @@ def generate_attempts(
                     request_id=request.id,
                     statement_id=request.statement_id,
                     attempt=0,
-                    solver="qwen3-0.6b",
+                    solver="kimina-prover-preview-distill-1.5b",
                     seed=seed,
                     status="failed",
                     proof=extract_proof(output, request.statement),

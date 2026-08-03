@@ -56,6 +56,6 @@ timeout_seconds = 200.0
 
 [data]
 dataset_config = "datasets/leanworkbook.json"
-theorem_declarations = "../data/theorem_declarations.jsonl"
+theorem_declarations = "../data/dataset/theorem_declarations.jsonl"
 # Optional. May contain prompt/target records or formal_statement/proof records.
 # sft_dataset = "../data/sft.jsonl"

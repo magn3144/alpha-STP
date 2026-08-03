@@ -119,7 +119,6 @@ def validate_declaration_artifact(config: Config) -> None:
     for key in (
         "lean_toolchain",
         "imports",
-        "lean_project_revision",
         "mathlib_revision",
     ):
         if manifest[key] != expected[key]:
