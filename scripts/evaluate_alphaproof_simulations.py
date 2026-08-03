@@ -23,7 +23,7 @@ EVALUATIONS_DIR = REPOSITORY / "data/evaluations"
 ALPHAPROOF_RUN_DIR = (
     REPOSITORY.parent / "delta-proof/data/runs/sft_codet5p_770m_v100_32gb"
 )
-SIMULATION_BUDGETS = (8, 16, 32, 64, 128, 256, 512, 1024)
+SIMULATION_BUDGETS = (8, 16, 32, 64, 128, 256, 512, 1024, 2048)
 
 
 def parse_args() -> argparse.Namespace:

@@ -24,7 +24,7 @@ from stp.storage import read_jsonl
 REPOSITORY = Path(__file__).resolve().parents[1]
 MODEL_DIR = REPOSITORY / "models/Kimina-Prover-Preview-Distill-1.5B"
 DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
-CONFIG_PATH = REPOSITORY / "configs/example.toml"
+CONFIG_PATH = REPOSITORY / "configs/alpha_stp.toml"
 
 
 def positive_int(value: str) -> int:

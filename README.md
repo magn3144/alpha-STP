@@ -39,13 +39,13 @@ Create the version-coupled theorem declaration artifact before starting a
 run:
 
 ```bash
-uv run stp declarations --config configs/example.toml
+uv run stp declarations --config configs/alpha_stp.toml
 ```
 
 Then run or resume the configured self-play loop:
 
 ```bash
-uv run stp run --config configs/example.toml
+uv run stp run --config configs/alpha_stp.toml
 ```
 
 Each round stores its conjecturer inputs, generated conjectures, proof
@@ -61,7 +61,7 @@ Evaluate both a Hugging Face causal LLM and AlphaProof on the problems in
 
 ```bash
 uv run python scripts/evaluate_numina.py \
-  --config configs/example.toml \
+  --config configs/alpha_stp.toml \
   --llm-model models/Kimina-Prover-Preview-Distill-1.5B \
   --llm-prover-handler kimina_numina
 ```
@@ -81,7 +81,7 @@ budgets from 8 through 512 simulations, run:
 
 ```bash
 uv run python scripts/evaluate_alphaproof_simulations.py \
-  --config configs/example.toml \
+  --config configs/alpha_stp.toml \
   --problem-index 0
 ```
 

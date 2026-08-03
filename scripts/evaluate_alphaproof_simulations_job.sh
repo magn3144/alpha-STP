@@ -24,6 +24,6 @@ export TOKENIZERS_PARALLELISM=false
 
 nvidia-smi
 python -u scripts/evaluate_alphaproof_simulations.py \
-    --config configs/example.toml \
+    --config configs/alpha_stp.toml \
     --problem-index 0 \
     --name "alphaproof-simulations-${LSB_JOBID}"

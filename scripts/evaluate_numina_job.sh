@@ -21,9 +21,9 @@ export MKL_NUM_THREADS="$LSB_DJOB_NUMPROC"
 export TOKENIZERS_PARALLELISM=false
 
 nvidia-smi
-stp declarations --config configs/example.toml
+stp declarations --config configs/alpha_stp.toml
 python -u scripts/evaluate_numina.py \
-    --config configs/example.toml \
+    --config configs/alpha_stp.toml \
     --llm-model models/Kimina-Prover-Preview-Distill-1.5B \
     --llm-prover-handler kimina_numina \
     --name "numina-${LSB_JOBID}"

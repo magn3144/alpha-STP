@@ -4,6 +4,7 @@ import gc
 import math
 import random
 import time
+from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence, cast
@@ -27,7 +28,7 @@ class GpuPolicy:
 
     name: str
     dtype: torch.dtype
-    autocast_dtype: torch.dtype
+    autocast_dtype: torch.dtype | None
     attention: str
     use_grad_scaler: bool
 
@@ -42,7 +43,7 @@ class ModelRuntime:
 
 
 def select_gpu_policy() -> GpuPolicy:
-    """Choose A100 BF16 or V100 FP16 behavior from CUDA capability."""
+    """Choose A100 BF16 or V100 FP32 behavior from CUDA capability."""
 
     if not torch.cuda.is_available():
         raise RuntimeError("STP requires one CUDA GPU.")
@@ -61,11 +62,11 @@ def select_gpu_policy() -> GpuPolicy:
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cudnn.allow_tf32 = False
         return GpuPolicy(
-            name="v100_fp16",
-            dtype=torch.float16,
-            autocast_dtype=torch.float16,
+            name="v100_fp32",
+            dtype=torch.float32,
+            autocast_dtype=None,
             attention="eager",
-            use_grad_scaler=True,
+            use_grad_scaler=False,
         )
     raise RuntimeError(f"Unsupported CUDA compute capability {major}.")
 
@@ -175,6 +176,7 @@ def generate_texts(
                 if max_new_tokens is not None
                 else settings.max_new_tokens
             ),
+            "use_cache": True,
             "pad_token_id": runtime.tokenizer.pad_token_id,
             "eos_token_id": runtime.tokenizer.eos_token_id,
         }
@@ -353,10 +355,15 @@ def train_model(
             labels = batch["labels"].to("cuda")
             attention_mask = batch["attention_mask"].to("cuda")
             weights = batch["weights"].to("cuda")
-            with torch.autocast(
-                device_type="cuda",
-                dtype=runtime.policy.autocast_dtype,
-            ):
+            autocast = (
+                torch.autocast(
+                    device_type="cuda",
+                    dtype=runtime.policy.autocast_dtype,
+                )
+                if runtime.policy.autocast_dtype is not None
+                else nullcontext()
+            )
+            with autocast:
                 logits = model(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
