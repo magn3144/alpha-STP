@@ -60,7 +60,7 @@ Evaluate both a Hugging Face causal LLM and AlphaProof on the problems in
 `data/dataset/numina_sft_evaluation/test.jsonl` with:
 
 ```bash
-uv run python scripts/evaluate_numina.py \
+uv run python -m stp.evaluate_difficulty_score.evaluate_numina \
   --config configs/alpha_stp.toml \
   --llm-model models/Kimina-Prover-Preview-Distill-1.5B \
   --llm-prover-handler kimina_numina
