@@ -30,6 +30,7 @@ from stp.evaluate_difficulty_score.scores import (
     score_keys,
 )
 from stp.evaluate_difficulty_score.solver_processes import (
+    SolverProcessError,
     solve_with_alphaproof_process,
     solve_with_llm_process,
 )
@@ -73,33 +74,48 @@ def evaluate() -> None:
 
     for problem in problems:
         if problem.id not in llm_results:
-            llm_attempts = solve_with_llm_process(
-                llm_requests_by_id[problem.id],
-                llm_config,
-                model,
-                tokenizer,
-            )
-            save_llm_generations(
-                paths.llm,
-                problem,
-                llm_attempts,
-                llm_results,
-            )
-            append_score(paths.scores, llm_attempts, saved_scores)
+            try:
+                llm_attempts = solve_with_llm_process(
+                    llm_requests_by_id[problem.id],
+                    llm_config,
+                    model,
+                    tokenizer,
+                )
+            except SolverProcessError as error:
+                print(f"LLM failed for {problem.id}: {error}", flush=True)
+            else:
+                save_llm_generations(
+                    paths.llm,
+                    problem,
+                    llm_attempts,
+                    llm_results,
+                )
+                append_score(paths.scores, llm_attempts, saved_scores)
 
         if problem.id not in alphaproof_results:
-            alphaproof_attempts, raw_result = solve_with_alphaproof_process(
-                alphaproof_requests_by_id[problem.id],
-                alphaproof_config,
-            )
-            save_alphaproof_search(
-                paths.alphaproof,
-                problem,
-                alphaproof_attempts,
-                raw_result,
-                alphaproof_results,
-            )
-            append_score(paths.scores, alphaproof_attempts, saved_scores)
+            try:
+                alphaproof_attempts, raw_result = solve_with_alphaproof_process(
+                    alphaproof_requests_by_id[problem.id],
+                    alphaproof_config,
+                )
+            except SolverProcessError as error:
+                print(
+                    f"AlphaProof failed for {problem.id}: {error}",
+                    flush=True,
+                )
+            else:
+                save_alphaproof_search(
+                    paths.alphaproof,
+                    problem,
+                    alphaproof_attempts,
+                    raw_result,
+                    alphaproof_results,
+                )
+                append_score(
+                    paths.scores,
+                    alphaproof_attempts,
+                    saved_scores,
+                )
 
     print(output_dir)
 

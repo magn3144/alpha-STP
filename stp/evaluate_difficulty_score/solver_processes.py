@@ -2,6 +2,7 @@
 
 from multiprocessing import get_context
 from pathlib import Path
+import subprocess
 from tempfile import TemporaryDirectory
 from typing import Any, Sequence
 
@@ -10,6 +11,10 @@ from stp.inference.model import load_runtime
 from stp.core.records import ProofRequest, SolveAttempt
 from stp.proving.solvers import solve_with_alphaproof, solve_with_llm
 from stp.data.storage import load_records, read_jsonl, write_jsonl
+
+
+class SolverProcessError(RuntimeError):
+    """Report a failed solver subprocess to the evaluation loop."""
 
 
 def run_llm_worker(
@@ -45,7 +50,9 @@ def solve_with_llm_process(
         exitcode = process.exitcode
         process.close()
         if exitcode != 0:
-            raise RuntimeError(f"LLM worker exited with status {exitcode}.")
+            raise SolverProcessError(
+                f"LLM worker exited with status {exitcode}."
+            )
         return load_records(output_path, SolveAttempt)
 
 
@@ -57,6 +64,9 @@ def solve_with_alphaproof_process(
 
     with TemporaryDirectory(prefix="alpha-stp-evaluation-") as temporary:
         artifact_dir = Path(temporary)
-        attempts = solve_with_alphaproof(requests, config, artifact_dir)
+        try:
+            attempts = solve_with_alphaproof(requests, config, artifact_dir)
+        except subprocess.SubprocessError as error:
+            raise SolverProcessError(f"AlphaProof failed: {error}") from error
         raw_result = read_jsonl(artifact_dir / "alphaproof_results.jsonl")[0]
     return attempts, raw_result
