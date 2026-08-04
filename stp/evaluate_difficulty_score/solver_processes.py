@@ -5,11 +5,11 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Sequence
 
-from stp.config import Config
-from stp.model import load_runtime
-from stp.records import ProofRequest, SolveAttempt
-from stp.solvers import solve_with_alphaproof, solve_with_llm
-from stp.storage import load_records, read_jsonl, write_jsonl
+from stp.core.config import Config
+from stp.inference.model import load_runtime
+from stp.core.records import ProofRequest, SolveAttempt
+from stp.proving.solvers import solve_with_alphaproof, solve_with_llm
+from stp.data.storage import load_records, read_jsonl, write_jsonl
 
 
 def run_llm_worker(

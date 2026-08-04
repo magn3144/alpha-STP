@@ -4,15 +4,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence, cast
 
-from stp.data import canonical_statement
-from stp.records import (
+from stp.data.datasets import canonical_statement
+from stp.core.records import (
     ProofRequest,
     SolveAttempt,
     SolveStatus,
     Statement,
     record_to_dict,
 )
-from stp.storage import append_jsonl, read_jsonl, read_resumable_jsonl
+from stp.data.storage import append_jsonl, read_jsonl, read_resumable_jsonl
 
 
 @dataclass(frozen=True)

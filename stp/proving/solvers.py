@@ -5,18 +5,18 @@ import subprocess
 from pathlib import Path
 from typing import Any, Sequence, cast
 
-from stp.config import Config
-from stp.data import alphaproof_theorem
-from stp.declarations import load_declaration_names
-from stp.lean import verify_attempts
-from stp.model import ModelRuntime
-from stp.prover_models.registry import generate_proofs
-from stp.records import ProofRequest, SolveAttempt, SolveStatus
-from stp.search_metrics import (
+from stp.core.config import Config
+from stp.data.datasets import alphaproof_theorem
+from stp.data.declarations import load_declaration_names
+from stp.proving.lean import verify_attempts
+from stp.inference.model import ModelRuntime
+from stp.inference.prover_models.registry import generate_proofs
+from stp.core.records import ProofRequest, SolveAttempt, SolveStatus
+from stp.proving.search_metrics import (
     hardest_subproblem_solve_rate,
     hardest_subproblem_tree,
 )
-from stp.storage import read_jsonl, write_jsonl
+from stp.data.storage import read_jsonl, write_jsonl
 
 
 def deduplicate_attempts(

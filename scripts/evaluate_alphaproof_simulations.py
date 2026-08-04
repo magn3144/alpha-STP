@@ -8,13 +8,13 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 
-from stp.config import Config, load_config
-from stp.data import canonical_statement
-from stp.generate import make_proof_requests
-from stp.records import Statement
-from stp.scoring import calculate_scores
-from stp.solvers import solve_with_alphaproof
-from stp.storage import read_jsonl, write_jsonl
+from stp.core.config import Config, load_config
+from stp.data.datasets import canonical_statement
+from stp.self_play.generate import make_proof_requests
+from stp.core.records import Statement
+from stp.self_play.scoring import calculate_scores
+from stp.proving.solvers import solve_with_alphaproof
+from stp.data.storage import read_jsonl, write_jsonl
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]

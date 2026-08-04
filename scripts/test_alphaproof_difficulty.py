@@ -9,12 +9,12 @@ from dataclasses import replace
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from stp.config import load_config
-from stp.data import alphaproof_theorem, canonical_statement
-from stp.generate import make_proof_requests
-from stp.records import Statement
-from stp.search_metrics import hardest_subproblem_solve_rate
-from stp.storage import read_jsonl, write_jsonl
+from stp.core.config import load_config
+from stp.data.datasets import alphaproof_theorem, canonical_statement
+from stp.self_play.generate import make_proof_requests
+from stp.core.records import Statement
+from stp.proving.search_metrics import hardest_subproblem_solve_rate
+from stp.data.storage import read_jsonl, write_jsonl
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]

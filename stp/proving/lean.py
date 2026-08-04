@@ -13,8 +13,8 @@ from leantree.repl_adapter.interaction import (
     LeanProcessException,
 )
 
-from stp.config import LeanSettings
-from stp.records import ProofRequest, SolveAttempt
+from stp.core.config import LeanSettings
+from stp.core.records import ProofRequest, SolveAttempt
 
 DECLARATION_NAME = re.compile(
     r"\b(?:theorem|lemma)\s+([^\s({:]+)"

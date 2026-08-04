@@ -7,14 +7,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Sequence
 
-from stp.config import Config
-from stp.data import canonical_statement, stable_id
-from stp.model import ModelRuntime, generate_texts
-from stp.prompts import (
+from stp.core.config import Config
+from stp.data.datasets import canonical_statement, stable_id
+from stp.inference.model import ModelRuntime, generate_texts
+from stp.inference.prompts import (
     conjecturer_generation_prompt,
     parse_conjecture,
 )
-from stp.records import (
+from stp.core.records import (
     Conjecture,
     ConjectureAssessment,
     ConjectureInput,
@@ -22,7 +22,7 @@ from stp.records import (
     SolveAttempt,
     Statement,
 )
-from stp.solvers import solve_with_alphaproof, solve_with_llm
+from stp.proving.solvers import solve_with_alphaproof, solve_with_llm
 
 TRIVIAL_LEMMA = "theorem true : True"
 CONJECTURE_SOURCE_THRESHOLD = 0.35

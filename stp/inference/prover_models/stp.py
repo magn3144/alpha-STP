@@ -2,10 +2,10 @@
 
 from typing import Any, Sequence
 
-from stp.config import Config
-from stp.model import ModelRuntime, generate_texts
-from stp.records import ProofRequest
-from stp.prover_models.types import GeneratedProof
+from stp.core.config import Config
+from stp.inference.model import ModelRuntime, generate_texts
+from stp.core.records import ProofRequest
+from stp.inference.prover_models.types import GeneratedProof
 
 
 LEAN_CODE_PROMPT = "Complete the following Lean 4 code:\n\n```lean4\n"

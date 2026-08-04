@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from stp.evaluate_difficulty_score.evaluation_config import LLM_ATTEMPTS
-from stp.records import SolveAttempt
-from stp.scoring import calculate_scores
-from stp.storage import append_jsonl, read_resumable_jsonl
+from stp.core.records import SolveAttempt
+from stp.self_play.scoring import calculate_scores
+from stp.data.storage import append_jsonl, read_resumable_jsonl
 
 
 def score_record(attempts: Sequence[SolveAttempt]) -> dict[str, Any]:

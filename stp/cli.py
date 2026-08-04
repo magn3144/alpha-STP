@@ -4,9 +4,9 @@ import argparse
 import json
 from pathlib import Path
 
-from stp.config import load_config
-from stp.declarations import build_declaration_artifact
-from stp.stp_loop import evaluate, run, run_round
+from stp.core.config import load_config
+from stp.data.declarations import build_declaration_artifact
+from stp.self_play.stp_loop import evaluate, run, run_round
 
 
 def _parser() -> argparse.ArgumentParser:

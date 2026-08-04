@@ -3,10 +3,10 @@
 import re
 from typing import Any, Sequence
 
-from stp.config import Config
-from stp.model import ModelRuntime, generate_texts
-from stp.prover_models.types import GeneratedProof
-from stp.records import ProofRequest
+from stp.core.config import Config
+from stp.inference.model import ModelRuntime, generate_texts
+from stp.inference.prover_models.types import GeneratedProof
+from stp.core.records import ProofRequest
 
 
 LEAN4_CODE_BLOCK = re.compile(r"```lean4[ \t]*\r?\n(.*?)```", re.DOTALL)

@@ -3,24 +3,24 @@
 import time
 from pathlib import Path
 
-from stp.artifacts import (
+from stp.data.artifacts import (
     historical_attempts,
     input_checkpoint,
     previous_scores,
     round_dir,
     write_manifest,
 )
-from stp.config import Config
-from stp.data import load_statements
-from stp.declarations import load_declaration_map
-from stp.generate import (
+from stp.core.config import Config
+from stp.data.datasets import load_statements
+from stp.data.declarations import load_declaration_map
+from stp.self_play.generate import (
     generate_conjectures,
     generate_proofs,
     make_proof_requests,
     prepare_conjecture_inputs,
 )
-from stp.model import ModelRuntime, load_runtime, unload_runtime
-from stp.records import (
+from stp.inference.model import ModelRuntime, load_runtime, unload_runtime
+from stp.core.records import (
     Conjecture,
     ConjectureAssessment,
     ConjectureInput,
@@ -28,13 +28,13 @@ from stp.records import (
     SolveAttempt,
     Statement,
 )
-from stp.scoring import (
+from stp.self_play.scoring import (
     calculate_scores,
     select_dataset_statements,
     unproved_statements,
 )
-from stp.storage import load_records, read_json, write_json, write_jsonl
-from stp.train import prepare_training_examples, train_round
+from stp.data.storage import load_records, read_json, write_json, write_jsonl
+from stp.self_play.train import prepare_training_examples, train_round
 
 
 def run_round(config: Config, round_index: int) -> RoundState:

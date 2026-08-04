@@ -6,9 +6,9 @@ import tempfile
 from pathlib import Path
 from typing import Any, Sequence
 
-from stp.config import Config
-from stp.records import TheoremDeclaration
-from stp.storage import read_json, read_jsonl, write_json, write_jsonl
+from stp.core.config import Config
+from stp.core.records import TheoremDeclaration
+from stp.data.storage import read_json, read_jsonl, write_json, write_jsonl
 
 
 def _git_revision(path: Path) -> str:
@@ -33,7 +33,7 @@ def declaration_provenance(config: Config) -> dict[str, Any]:
     """Describe the Lean environment used by the declaration artifact."""
 
     mathlib = config.lean.project_dir / ".lake" / "packages" / "mathlib"
-    repository = Path(__file__).resolve().parents[1]
+    repository = Path(__file__).resolve().parents[2]
     return {
         "lean_toolchain": (
             config.lean.project_dir / "lean-toolchain"

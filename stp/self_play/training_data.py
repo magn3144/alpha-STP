@@ -7,19 +7,19 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-from stp.artifacts import load_round_pool, round_dir
-from stp.config import Config, ProverHandlerName
-from stp.model import (
+from stp.data.artifacts import load_round_pool, round_dir
+from stp.core.config import Config, ProverHandlerName
+from stp.inference.model import (
     embed_texts,
     load_runtime,
     unload_runtime,
 )
-from stp.prompts import (
+from stp.inference.prompts import (
     END_THM,
     conjecturer_training_prompt,
 )
-from stp.prover_models.registry import training_text
-from stp.records import (
+from stp.inference.prover_models.registry import training_text
+from stp.core.records import (
     Conjecture,
     ConjectureAssessment,
     ConjectureFilterMetric,
@@ -27,8 +27,8 @@ from stp.records import (
     Statement,
     TrainingExample,
 )
-from stp.scoring import wasserstein_matching
-from stp.storage import load_records
+from stp.self_play.scoring import wasserstein_matching
+from stp.data.storage import load_records
 
 
 def build_prover_examples(

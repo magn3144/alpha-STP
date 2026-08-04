@@ -17,9 +17,9 @@ from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from stp.config import ModelSettings
-from stp.records import TrainingExample
-from stp.storage import write_json
+from stp.core.config import ModelSettings
+from stp.core.records import TrainingExample
+from stp.data.storage import write_json
 
 
 @dataclass(frozen=True)

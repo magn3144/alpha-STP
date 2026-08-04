@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import cast
 
-from stp.config import Config, ProverHandlerName
+from stp.core.config import Config, ProverHandlerName
 
 
 REPOSITORY = Path(__file__).resolve().parents[2]

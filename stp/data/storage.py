@@ -6,7 +6,7 @@ from dataclasses import fields
 from pathlib import Path
 from typing import Any, Iterable, TypeVar, cast
 
-from stp.records import record_to_dict
+from stp.core.records import record_to_dict
 
 
 Record = TypeVar("Record")

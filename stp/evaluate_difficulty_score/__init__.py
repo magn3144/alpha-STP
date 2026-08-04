@@ -1,1 +1,1 @@
-"""Resumable Numina difficulty-score evaluation."""
+"""Numina difficulty-score evaluation."""

@@ -5,25 +5,26 @@ It is used as part of my master thesis, where I experiment with potential perfor
 
 ## Code structure
 
-The outer algorithm is intentionally visible in three files:
+The outer algorithm is intentionally visible in three files under
+`stp/self_play/`:
 
-- `stp/stp_loop.py` selects problems and runs the conjecture, proof, scoring,
-  and training phases.
-- `stp/generate.py` prepares conjecturer inputs and calls either the LLM or
-  AlphaProof solver.
-- `stp/train.py` assembles the round's training data and trains the next
-  full-model checkpoint.
+- `stp/self_play/stp_loop.py` selects problems and runs the conjecture, proof,
+  scoring, and training phases.
+- `stp/self_play/generate.py` prepares conjecturer inputs and calls either the
+  LLM or AlphaProof solver.
+- `stp/self_play/train.py` assembles the round's training data and trains the
+  next full-model checkpoint.
 
-Prompt text, scoring, immutable records, artifact I/O, Lean verification,
-solver adapters, and detailed training-example transformations live in
-focused supporting modules under `stp/`.
+Shared configuration and immutable records live in `stp/core/`. Dataset and
+artifact I/O live in `stp/data/`, model runtime code and prompt formats in
+`stp/inference/`, and Lean verification and solver adapters in `stp/proving/`.
 
 Proof-model prompting, sampling, answer parsing, and training formatting are
 selected by `model.prover_handler`. The available handlers are `stp`, which
 uses the original completion format, and `kimina_numina`, which uses the
 Kimina-Prover chat template and extracts the final exact-theorem `lean4` block.
 Both expose the same normalized proof-generation interface under
-`stp/prover_models/`.
+`stp/inference/prover_models/`.
 
 The LLM solver uses the configured number of independent proof attempts.
 Its output budget is configured independently from conjecture generation with
@@ -31,7 +32,7 @@ Its output budget is configured independently from conjecture generation with
 AlphaProof instead performs one fixed-budget tree search per theorem, stores
 the complete AND-OR tree, and scores its hardest-subproblem OR projection by
 the fraction of proven frontier nodes. This transformation and metric live in
-`stp/search_metrics.py`; AlphaProof only returns the raw search tree.
+`stp/proving/search_metrics.py`; AlphaProof only returns the raw search tree.
 
 ## Running
 

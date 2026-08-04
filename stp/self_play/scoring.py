@@ -6,7 +6,7 @@ from typing import Sequence, TypeVar
 
 import numpy as np
 
-from stp.records import ConjectureAssessment, SolveAttempt, Statement
+from stp.core.records import ConjectureAssessment, SolveAttempt, Statement
 
 Candidate = TypeVar("Candidate")
 

@@ -1,6 +1,8 @@
-"""Evaluate one LLM and AlphaProof on the Numina theorem test set."""
+"""Calculate both difficulty metrics on the problems in the given dataset.
+These difficulty metrics are the STP and AlphaProof metrics.
+The point is to see how they correlate"""
 
-from stp.config import load_config
+from stp.core.config import load_config
 from stp.evaluate_difficulty_score.data import (
     alphaproof_attempts_by_problem,
     evaluation_paths,
@@ -31,7 +33,7 @@ from stp.evaluate_difficulty_score.solver_processes import (
     solve_with_alphaproof_process,
     solve_with_llm_process,
 )
-from stp.generate import make_proof_requests
+from stp.self_play.generate import make_proof_requests
 
 
 def evaluate() -> None:

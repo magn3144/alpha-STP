@@ -2,11 +2,11 @@
 
 from typing import Any, Callable, Sequence
 
-from stp.config import Config, ProverHandlerName
-from stp.model import ModelRuntime
-from stp.prover_models import kimina_numina, stp
-from stp.prover_models.types import GeneratedProof
-from stp.records import ProofRequest
+from stp.core.config import Config, ProverHandlerName
+from stp.core.records import ProofRequest
+from stp.inference.model import ModelRuntime
+from stp.inference.prover_models import kimina_numina, stp
+from stp.inference.prover_models.types import GeneratedProof
 
 
 ProverFunction = Callable[

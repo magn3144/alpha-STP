@@ -6,15 +6,15 @@ import re
 from pathlib import Path
 from typing import Any
 
-from stp.config import ProverHandlerName
-from stp.prover_models.registry import training_text
-from stp.records import Statement, TrainingExample
-from stp.storage import read_json
+from stp.core.config import ProverHandlerName
+from stp.core.records import Statement, TrainingExample
+from stp.data.storage import read_json
+from stp.inference.prover_models.registry import training_text
 
 
 BY_SUFFIX = re.compile(r":=\s*by\s*$")
 ASSIGN_SUFFIX = re.compile(r":=\s*$")
-REPOSITORY = Path(__file__).resolve().parents[1]
+REPOSITORY = Path(__file__).resolve().parents[2]
 
 
 def stable_id(value: str) -> str:

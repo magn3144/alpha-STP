@@ -8,17 +8,17 @@ from typing import Any
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from stp.config import LeanSettings, load_config
-from stp.data import canonical_statement
-from stp.lean import verify_attempts
-from stp.prover_models.kimina_numina import (
+from stp.core.config import LeanSettings, load_config
+from stp.data.datasets import canonical_statement
+from stp.proving.lean import verify_attempts
+from stp.inference.prover_models.kimina_numina import (
     TEMPERATURE,
     TOP_P,
     chat_prompt,
     extract_proof,
 )
-from stp.records import ProofRequest, SolveAttempt, Statement
-from stp.storage import read_jsonl
+from stp.core.records import ProofRequest, SolveAttempt, Statement
+from stp.data.storage import read_jsonl
 
 
 REPOSITORY = Path(__file__).resolve().parents[1]

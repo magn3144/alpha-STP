@@ -3,10 +3,10 @@
 from pathlib import Path
 from typing import Sequence
 
-from stp.config import Config
-from stp.data import load_sft_examples
-from stp.model import load_tokenizer, train_model
-from stp.records import (
+from stp.core.config import Config
+from stp.data.datasets import load_sft_examples
+from stp.inference.model import load_tokenizer, train_model
+from stp.core.records import (
     Conjecture,
     ConjectureAssessment,
     ConjectureFilterMetric,
@@ -14,9 +14,9 @@ from stp.records import (
     Statement,
     TrainingExample,
 )
-from stp.scoring import unproved_statements
-from stp.storage import load_records, write_jsonl
-from stp.training_data import (
+from stp.self_play.scoring import unproved_statements
+from stp.data.storage import load_records, write_jsonl
+from stp.self_play.training_data import (
     build_conjecturer_examples,
     deduplicate_examples,
     match_conjecturer_examples,

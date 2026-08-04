@@ -4,18 +4,18 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from stp.config import Config
-from stp.declarations import (
+from stp.core.config import Config
+from stp.data.declarations import (
     declaration_manifest_path,
     validate_declaration_artifact,
 )
-from stp.records import (
+from stp.core.records import (
     Conjecture,
     ConjectureAssessment,
     SolveAttempt,
     Statement,
 )
-from stp.storage import load_records, read_json, write_json
+from stp.data.storage import load_records, read_json, write_json
 
 
 def round_dir(config: Config, round_index: int) -> Path:
@@ -105,7 +105,7 @@ def write_manifest(config: Config) -> None:
             )
         return
 
-    repository = Path(__file__).resolve().parents[1]
+    repository = Path(__file__).resolve().parents[2]
     alphaproof = repository.parent / "delta-proof"
     lean_version = subprocess.run(
         ["lake", "env", "lean", "--version"],
