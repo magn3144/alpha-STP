@@ -2,7 +2,8 @@
 
 import argparse
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
+from multiprocessing import get_context
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Sequence, cast
@@ -10,7 +11,7 @@ from typing import Any, Sequence, cast
 from stp.config import Config, ProverHandlerName, load_config
 from stp.data import canonical_statement
 from stp.generate import make_proof_requests
-from stp.model import load_runtime, unload_runtime
+from stp.model import load_runtime
 from stp.records import (
     ProofRequest,
     SolveAttempt,
@@ -22,8 +23,10 @@ from stp.scoring import calculate_scores
 from stp.solvers import solve_with_alphaproof, solve_with_llm
 from stp.storage import (
     append_jsonl,
+    load_records,
     read_jsonl,
     read_resumable_jsonl,
+    write_jsonl,
 )
 
 
@@ -32,6 +35,15 @@ DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
 EVALUATIONS_DIR = REPOSITORY / "data/evaluations"
 LLM_ATTEMPTS = 32
 ALPHAPROOF_ROLLOUTS = 250
+
+
+@dataclass(frozen=True)
+class EvaluationPaths:
+    """Output paths for LLM results, AlphaProof results, and solver scores."""
+
+    llm: Path
+    alphaproof: Path
+    scores: Path
 
 
 def parse_args() -> argparse.Namespace:
@@ -233,26 +245,39 @@ def append_score(
     saved_keys.add(key)
 
 
-def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> None:
-    """Run both solvers per problem and save resumable JSONL artifacts."""
+def evaluation_paths(output_dir: Path) -> EvaluationPaths:
+    """Build artifact paths from an evaluation directory and return them."""
 
-    problems = load_problems(DATASET_PATH)
-    problem_ids = {problem.id for problem in problems}
-    llm_path = output_dir / "llm_generations.jsonl"
-    alphaproof_path = output_dir / "alphaproof_search_trees.jsonl"
-    scores_path = output_dir / "difficulty_scores.jsonl"
-    llm_attempts_by_id = llm_attempts_by_problem(
-        load_results_by_problem(llm_path, problem_ids)
+    return EvaluationPaths(
+        llm=output_dir / "llm_generations.jsonl",
+        alphaproof=output_dir / "alphaproof_search_trees.jsonl",
+        scores=output_dir / "difficulty_scores.jsonl",
     )
-    alphaproof_attempts_by_id = alphaproof_attempts_by_problem(
-        load_results_by_problem(alphaproof_path, problem_ids)
-    )
-    saved_score_keys = score_keys(scores_path, problem_ids)
-    for attempts_by_id in (llm_attempts_by_id, alphaproof_attempts_by_id):
+
+
+def statement_ids(problems: Sequence[Statement]) -> set[str]:
+    """Collect statement IDs from problems and return them as a set."""
+
+    return {problem.id for problem in problems}
+
+
+def recover_missing_scores(
+    path: Path,
+    llm_results: dict[str, list[SolveAttempt]],
+    alphaproof_results: dict[str, list[SolveAttempt]],
+    saved_scores: set[tuple[str, str]],
+) -> None:
+    """Append scores missing for solver results saved before an interruption."""
+
+    for attempts_by_id in (llm_results, alphaproof_results):
         for attempts in attempts_by_id.values():
-            append_score(scores_path, attempts, saved_score_keys)
+            append_score(path, attempts, saved_scores)
 
-    llm_config = replace(
+
+def llm_solver_config(config: Config) -> Config:
+    """Select fixed LLM evaluation settings and return the updated config."""
+
+    return replace(
         config,
         solver=replace(
             config.solver,
@@ -260,13 +285,12 @@ def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> No
             attempts_per_statement=LLM_ATTEMPTS,
         ),
     )
-    llm_requests = make_proof_requests(
-        problems,
-        LLM_ATTEMPTS,
-        config.run.seed,
-    )
-    llm_requests_by_id = requests_by_problem(llm_requests)
-    alphaproof_config = replace(
+
+
+def alphaproof_solver_config(config: Config) -> Config:
+    """Select fixed AlphaProof evaluation settings and return the updated config."""
+
+    return replace(
         config,
         solver=replace(
             config.solver,
@@ -274,78 +298,187 @@ def evaluate(config: Config, model: str, tokenizer: str, output_dir: Path) -> No
             alphaproof_num_simulations=ALPHAPROOF_ROLLOUTS,
         ),
     )
-    alphaproof_requests = make_proof_requests(
-        problems,
-        1,
-        config.run.seed,
+
+
+def select_prover_handler(
+    config: Config,
+    handler: str | None,
+) -> Config:
+    """Apply an optional prover handler and return the selected config."""
+
+    if handler is None:
+        return config
+    return replace(
+        config,
+        model=replace(
+            config.model,
+            prover_handler=cast(ProverHandlerName, handler),
+        ),
     )
-    alphaproof_requests_by_id = requests_by_problem(alphaproof_requests)
 
-    for problem in problems:
-        if problem.id not in llm_attempts_by_id:
-            runtime = load_runtime(model, tokenizer)
-            try:
-                llm_attempts = solve_with_llm(
-                    llm_requests_by_id[problem.id],
-                    runtime,
-                    llm_config,
-                )
-            finally:
-                unload_runtime(runtime)
-            llm_record = {
-                "problem_id": problem.id,
-                "attempts": [
-                    record_to_dict(attempt) for attempt in llm_attempts
-                ],
-            }
-            append_jsonl(llm_path, llm_record)
-            llm_attempts_by_id[problem.id] = llm_attempts
-            append_score(scores_path, llm_attempts, saved_score_keys)
 
-        if problem.id in alphaproof_attempts_by_id:
-            continue
-        with TemporaryDirectory(prefix="alpha-stp-evaluation-") as temporary:
-            artifact_dir = Path(temporary)
-            alphaproof_attempts = solve_with_alphaproof(
-                alphaproof_requests_by_id[problem.id],
-                alphaproof_config,
-                artifact_dir,
+def run_llm_worker(
+    requests: Sequence[ProofRequest],
+    config: Config,
+    model: str,
+    tokenizer: str,
+    output_path: Path,
+) -> None:
+    """Solve one problem with the LLM and write attempts from the child process."""
+
+    runtime = load_runtime(model, tokenizer)
+    attempts = solve_with_llm(requests, runtime, config)
+    write_jsonl(output_path, attempts)
+
+
+def solve_with_llm_process(
+    requests: Sequence[ProofRequest],
+    config: Config,
+    model: str,
+    tokenizer: str,
+) -> list[SolveAttempt]:
+    """Run one LLM problem in a spawned process and return its saved attempts."""
+
+    with TemporaryDirectory(prefix="alpha-stp-llm-") as temporary:
+        output_path = Path(temporary) / "attempts.jsonl"
+        process = get_context("spawn").Process(
+            target=run_llm_worker,
+            args=(requests, config, model, tokenizer, output_path),
+        )
+        process.start()
+        process.join()
+        exitcode = process.exitcode
+        process.close()
+        if exitcode != 0:
+            raise RuntimeError(
+                f"LLM worker exited with status {exitcode}."
             )
-            raw_result = read_jsonl(
-                artifact_dir / "alphaproof_results.jsonl"
-            )[0]
-        alphaproof_record = {
+        return load_records(output_path, SolveAttempt)
+
+
+def save_llm_generations(
+    path: Path,
+    problem: Statement,
+    attempts: list[SolveAttempt],
+    results: dict[str, list[SolveAttempt]],
+) -> None:
+    """Append one problem's LLM generations and update completed results."""
+
+    append_jsonl(
+        path,
+        {
+            "problem_id": problem.id,
+            "attempts": [record_to_dict(attempt) for attempt in attempts],
+        },
+    )
+    results[problem.id] = attempts
+
+
+def solve_with_alphaproof_process(
+    requests: Sequence[ProofRequest],
+    config: Config,
+) -> tuple[list[SolveAttempt], dict[str, Any]]:
+    """Run one AlphaProof subprocess and return normalized attempts and raw result."""
+
+    with TemporaryDirectory(prefix="alpha-stp-evaluation-") as temporary:
+        artifact_dir = Path(temporary)
+        attempts = solve_with_alphaproof(
+            requests,
+            config,
+            artifact_dir,
+        )
+        raw_result = read_jsonl(artifact_dir / "alphaproof_results.jsonl")[0]
+    return attempts, raw_result
+
+
+def save_alphaproof_search(
+    path: Path,
+    problem: Statement,
+    attempts: list[SolveAttempt],
+    raw_result: dict[str, Any],
+    results: dict[str, list[SolveAttempt]],
+) -> None:
+    """Append one AlphaProof search tree and update completed results."""
+
+    append_jsonl(
+        path,
+        {
             "problem_id": problem.id,
             "request_id": raw_result["request_id"],
-            "attempt": record_to_dict(alphaproof_attempts[0]),
+            "attempt": record_to_dict(attempts[0]),
             "tree": raw_result["tree"],
-        }
-        append_jsonl(alphaproof_path, alphaproof_record)
-        alphaproof_attempts_by_id[problem.id] = alphaproof_attempts
-        append_score(scores_path, alphaproof_attempts, saved_score_keys)
+        },
+    )
+    results[problem.id] = attempts
 
 
-def main() -> None:
-    """Load configuration and run the complete Numina evaluation."""
+def evaluate() -> None:
+    """Run the complete resumable Numina evaluation from CLI inputs."""
 
     args = parse_args()
     config = load_config(args.config)
-    if args.llm_prover_handler is not None:
-        config = replace(
-            config,
-            model=replace(
-                config.model,
-                prover_handler=cast(
-                    ProverHandlerName,
-                    args.llm_prover_handler,
-                ),
-            ),
-        )
-    model, tokenizer = model_paths(args, config)
+    config = select_prover_handler(config, args.llm_prover_handler)
     output_dir = evaluation_directory(args.name)
-    evaluate(config, model, tokenizer, output_dir)
+    model, tokenizer = model_paths(args, config)
+
+    problems = load_problems(DATASET_PATH)
+    problem_ids = statement_ids(problems)
+    paths = evaluation_paths(output_dir)
+
+    llm_results = llm_attempts_by_problem(
+        load_results_by_problem(paths.llm, problem_ids)
+    )
+    alphaproof_results = alphaproof_attempts_by_problem(
+        load_results_by_problem(paths.alphaproof, problem_ids)
+    )
+    saved_scores = score_keys(paths.scores, problem_ids)
+
+    recover_missing_scores(
+        paths.scores,
+        llm_results,
+        alphaproof_results,
+        saved_scores,
+    )
+
+    llm_config = llm_solver_config(config)
+    alphaproof_config = alphaproof_solver_config(config)
+    llm_requests = make_proof_requests(problems, LLM_ATTEMPTS, config.run.seed)
+    alphaproof_requests = make_proof_requests(problems, 1, config.run.seed)
+    llm_requests_by_id = requests_by_problem(llm_requests)
+    alphaproof_requests_by_id = requests_by_problem(alphaproof_requests)
+
+    for problem in problems:
+        if problem.id not in llm_results:
+            llm_attempts = solve_with_llm_process(
+                llm_requests_by_id[problem.id],
+                llm_config,
+                model,
+                tokenizer,
+            )
+            save_llm_generations(
+                paths.llm,
+                problem,
+                llm_attempts,
+                llm_results,
+            )
+            append_score(paths.scores, llm_attempts, saved_scores)
+
+        if problem.id not in alphaproof_results:
+            alphaproof_attempts, raw_result = solve_with_alphaproof_process(
+                alphaproof_requests_by_id[problem.id],
+                alphaproof_config,
+            )
+            save_alphaproof_search(
+                paths.alphaproof,
+                problem,
+                alphaproof_attempts,
+                raw_result,
+                alphaproof_results,
+            )
+            append_score(paths.scores, alphaproof_attempts, saved_scores)
+
     print(output_dir)
 
 
 if __name__ == "__main__":
-    main()
+    evaluate()
