@@ -44,7 +44,7 @@ top_p = 1.0
 # batch contract documented in README.md.
 alphaproof_command = ["python", "-m", "alphaproof.inference.infer"]
 alphaproof_run_dir = "../../delta-proof/data/runs/sft_codet5p_770m_v100_32gb"
-alphaproof_num_simulations = 250
+alphaproof_num_simulations = 512
 alphaproof_num_sampled_actions = 6
 alphaproof_timeout_seconds = 3600.0
 
