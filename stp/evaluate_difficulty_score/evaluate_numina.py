@@ -46,6 +46,13 @@ def evaluate() -> None:
     model, tokenizer = model_paths(args, config)
 
     problems = load_problems(DATASET_PATH)
+    if args.problem_index is not None:
+        if args.problem_index >= len(problems):
+            raise IndexError(
+                f"Problem index {args.problem_index} is outside the dataset "
+                f"of {len(problems)} problems."
+            )
+        problems = [problems[args.problem_index]]
     problem_ids = statement_ids(problems)
     paths = evaluation_paths(output_dir)
 

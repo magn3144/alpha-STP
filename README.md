@@ -80,6 +80,14 @@ each solver result immediately, and resumes an existing evaluation when given
 the same `--name`. Each difficulty record contains one problem and solver score
 with separate solver, Lean verification, and total time in seconds.
 
+For a small interactive GPU run, open a `voltash` shell in the VS Code terminal
+and run `scripts/debug_numina_voltash.sh`. Then start
+`Attach: Numina easy problem (voltash)` from Run and Debug. The script creates
+a localhost-only SSH tunnel between the login and GPU nodes. The launch uses
+`configs/debug_numina.toml` to evaluate problem index 8 with one LLM attempt and
+16 AlphaProof simulations. The Python process and its child solvers run on the
+GPU node.
+
 To compare the proof-tree difficulty metric for one problem at AlphaProof
 budgets from 8 through 512 simulations, run:
 

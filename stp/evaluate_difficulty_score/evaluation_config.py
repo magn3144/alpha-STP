@@ -38,7 +38,15 @@ def parse_args() -> argparse.Namespace:
         "--name",
         help="Output folder name under data/evaluations; defaults to a timestamp.",
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--problem-index",
+        type=int,
+        help="Zero-based Numina problem index; defaults to the complete dataset.",
+    )
+    args = parser.parse_args()
+    if args.problem_index is not None and args.problem_index < 0:
+        parser.error("--problem-index must be non-negative")
+    return args
 
 
 def evaluation_directory(name: str | None) -> Path:

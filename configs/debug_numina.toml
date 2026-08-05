@@ -1,0 +1,61 @@
+[run]
+output_dir = "../runs/example"
+rounds = 3
+statements_per_round = 1000
+replay_rounds = 3
+seed = 0
+conjecture_multiplier = 1
+conjecture_threshold = 0.25
+training_proof_threshold = 0.5
+trivial_lemma_probability = 0.5
+lemma_input_cap_fraction = 0.1
+elegance_drop_fraction = 0.2
+unfocused_example_ratio = 20
+unfocused_example_minimum = 4096
+wasserstein_max_weight = 3.0
+
+[model]
+# Set this to a Hugging Face causal language model or a local checkpoint.
+name = "models/Kimina-Prover-Preview-Distill-1.5B"
+tokenizer = "models/Kimina-Prover-Preview-Distill-1.5B"
+prover_handler = "kimina_numina"
+max_sequence_length = 1024
+# Used by conjecture generation. Proof generation has a separate solver limit.
+max_new_tokens = 1024
+generation_batch_size = 32
+embedding_batch_size = 8
+train_microbatch_size = 1
+gradient_accumulation_steps = 32
+epochs = 1
+learning_rate = 0.00005
+weight_decay = 0.01
+warmup_steps = 5
+gradient_checkpointing = true
+
+[solver]
+kind = "llm"
+# Used only by the LLM solver. AlphaProof performs one fixed-budget search.
+attempts_per_statement = 1
+prover_max_new_tokens = 8196
+temperature = 1.0
+top_p = 1.0
+
+# Used only when kind = "alphaproof". The command must implement the JSONL
+# batch contract documented in README.md.
+alphaproof_command = ["python", "-m", "alphaproof.inference.infer"]
+alphaproof_run_dir = "../../delta-proof/data/runs/sft_codet5p_770m_v100_32gb"
+alphaproof_num_simulations = 16
+alphaproof_num_sampled_actions = 6
+alphaproof_timeout_seconds = 3600.0
+
+[lean]
+project_dir = "../../delta-proof/lean_project"
+imports = ["Mathlib"]
+workers = 8
+timeout_seconds = 200.0
+
+[data]
+dataset_config = "datasets/leanworkbook.json"
+theorem_declarations = "../data/dataset/theorem_declarations.jsonl"
+# Optional. May contain prompt/target records or formal_statement/proof records.
+# sft_dataset = "../data/sft.jsonl"
