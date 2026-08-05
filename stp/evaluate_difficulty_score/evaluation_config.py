@@ -12,8 +12,6 @@ from stp.core.config import Config, ProverHandlerName
 REPOSITORY = Path(__file__).resolve().parents[2]
 DATASET_PATH = REPOSITORY / "data/dataset/numina_sft_evaluation/test.jsonl"
 EVALUATIONS_DIR = REPOSITORY / "data/evaluations"
-LLM_ATTEMPTS = 32
-ALPHAPROOF_ROLLOUTS = 250
 
 
 def parse_args() -> argparse.Namespace:
@@ -79,26 +77,24 @@ def select_prover_handler(config: Config, handler: str | None) -> Config:
 
 
 def llm_solver_config(config: Config) -> Config:
-    """Select fixed LLM evaluation settings and return the updated config."""
+    """Select the LLM solver kind and preserve its configured settings."""
 
     return replace(
         config,
         solver=replace(
             config.solver,
             kind="llm",
-            attempts_per_statement=LLM_ATTEMPTS,
         ),
     )
 
 
 def alphaproof_solver_config(config: Config) -> Config:
-    """Select fixed AlphaProof evaluation settings and return the updated config."""
+    """Select the AlphaProof solver kind and preserve configured settings."""
 
     return replace(
         config,
         solver=replace(
             config.solver,
             kind="alphaproof",
-            alphaproof_num_simulations=ALPHAPROOF_ROLLOUTS,
         ),
     )

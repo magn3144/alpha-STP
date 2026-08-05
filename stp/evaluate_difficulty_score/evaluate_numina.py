@@ -16,7 +16,6 @@ from stp.evaluate_difficulty_score.data import (
 )
 from stp.evaluate_difficulty_score.evaluation_config import (
     DATASET_PATH,
-    LLM_ATTEMPTS,
     alphaproof_solver_config,
     evaluation_directory,
     llm_solver_config,
@@ -67,7 +66,11 @@ def evaluate() -> None:
 
     llm_config = llm_solver_config(config)
     alphaproof_config = alphaproof_solver_config(config)
-    llm_requests = make_proof_requests(problems, LLM_ATTEMPTS, config.run.seed)
+    llm_requests = make_proof_requests(
+        problems,
+        llm_config.solver.attempts_per_statement,
+        config.run.seed,
+    )
     alphaproof_requests = make_proof_requests(problems, 1, config.run.seed)
     llm_requests_by_id = requests_by_problem(llm_requests)
     alphaproof_requests_by_id = requests_by_problem(alphaproof_requests)

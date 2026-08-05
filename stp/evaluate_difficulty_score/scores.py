@@ -3,7 +3,6 @@
 from pathlib import Path
 from typing import Any, Sequence
 
-from stp.evaluate_difficulty_score.evaluation_config import LLM_ATTEMPTS
 from stp.core.records import SolveAttempt
 from stp.self_play.scoring import calculate_scores
 from stp.data.storage import append_jsonl, read_resumable_jsonl
@@ -13,11 +12,6 @@ def score_record(attempts: Sequence[SolveAttempt]) -> dict[str, Any]:
     """Calculate one problem-solver score and return its serialized fields."""
 
     assessment = calculate_scores(attempts)[0]
-    if attempts[0].solver == "llm" and assessment.attempts != LLM_ATTEMPTS:
-        raise ValueError(
-            f"Expected {LLM_ATTEMPTS} LLM attempts for {assessment.statement_id}, "
-            f"got {assessment.attempts}."
-        )
     solver_seconds = sum(attempt.duration_seconds for attempt in attempts)
     verification_seconds = sum(attempt.verify_seconds for attempt in attempts)
     return {

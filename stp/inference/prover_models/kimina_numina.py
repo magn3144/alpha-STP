@@ -10,14 +10,38 @@ from stp.core.records import ProofRequest
 
 
 LEAN4_CODE_BLOCK = re.compile(r"```lean4[ \t]*\r?\n(.*?)```", re.DOTALL)
+LEAN_COMMENT = re.compile(r"/-.*?-/|--[^\r\n]*", re.DOTALL)
+LEAN_DECLARATION = re.compile(
+    r"\b(?:theorem|lemma)\s+.*?:=\s*by\b",
+    re.DOTALL,
+)
 TEMPERATURE = 0.6
 TOP_P = 0.95
+
+
+def remove_comments(text: str) -> str:
+    """Remove Lean comments from input text and return the remaining code."""
+
+    return LEAN_COMMENT.sub(" ", text).strip()
+
+
+def normalized_statement(text: str) -> str:
+    """Collapse statement whitespace and return text suitable for comparison."""
+
+    return " ".join(text.split())
+
+
+def mask_comments(text: str) -> str:
+    """Replace Lean comments with spaces and return code with stable offsets."""
+
+    return LEAN_COMMENT.sub(lambda match: " " * len(match.group()), text)
 
 
 def proof_prompt(statement: str, header: str | None) -> str:
     """Build a Kimina proof request from a statement and optional header."""
 
     context = f"\nLean context:\n{header.strip()}\n" if header is not None else ""
+    statement = remove_comments(statement)
     return f"""Prove the Lean 4 theorem below. Your entire response must be exactly one `lean4` Markdown code block containing the complete theorem and its proof, and nothing else. Copy the theorem statement exactly. Do not use `sorry` or `admit`.
 
 Example question:
@@ -70,16 +94,21 @@ def training_text(
 
 
 def extract_proof(text: str, statement: str) -> str | None:
-    """Extract the last exact-theorem Lean block and return its proof suffix."""
+    """Match the final Lean declaration and return its proof suffix."""
 
     blocks = LEAN4_CODE_BLOCK.findall(text)
     if not blocks:
         return None
     complete_proof = blocks[-1].strip()
-    if not complete_proof.startswith(statement):
-        return None
-    proof = complete_proof[len(statement) :].strip()
-    return proof or None
+    comparable_proof = mask_comments(complete_proof)
+    expected_declaration = normalized_statement(
+        LEAN_DECLARATION.findall(remove_comments(statement))[0]
+    )
+    for declaration in LEAN_DECLARATION.finditer(comparable_proof):
+        if normalized_statement(declaration.group()) == expected_declaration:
+            proof = complete_proof[declaration.end() :].strip()
+            return proof or None
+    return None
 
 
 def generate_proofs(

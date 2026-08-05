@@ -68,9 +68,10 @@ uv run python -m stp.evaluate_difficulty_score.evaluate_numina \
 ```
 
 Use `--llm-tokenizer` when the tokenizer lives at a different path. The script
-samples `LLM_ATTEMPTS` proofs per problem and performs one AlphaProof search
-with `ALPHAPROOF_ROLLOUTS` rollouts. Both parameters are defined at the top of
-the script. It creates a timestamped directory under
+uses `solver.attempts_per_statement` for the number of LLM proofs per problem
+and `solver.alphaproof_num_simulations` for the AlphaProof search budget. Both
+parameters come from the selected TOML configuration. It creates a timestamped
+directory under
 `data/evaluations` containing `llm_generations.jsonl`,
 `alphaproof_search_trees.jsonl`, and `difficulty_scores.jsonl`. Repeated LLM
 outputs are stored once with their count in the `multiplicity` field. The
