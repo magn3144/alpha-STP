@@ -32,6 +32,7 @@ if ! kill -0 "$tunnel_pid" 2>/dev/null; then
 fi
 
 export PYTHONPATH="$debugpy_root"
+export PATH="$PWD/.venv/bin:$PATH"
 export TOKENIZERS_PARALLELISM=false
 export OMP_NUM_THREADS=8
 export MKL_NUM_THREADS=8
