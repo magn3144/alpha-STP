@@ -14,17 +14,16 @@ class SFTLogger:
         run_id: str,
         wandb_name: str | None,
         wandb_mode: Literal["online", "offline", "disabled"],
-        resume: bool,
         config: dict[str, Any],
     ) -> None:
-        """Start or resume one W&B run from names, mode, and serialized config."""
+        """Start one W&B run from names, mode, and serialized config."""
 
         self.run: Any = wandb.init(
             project="alpha-stp",
             name=wandb_name or run_name,
             id=run_id,
             mode=wandb_mode,
-            resume="allow" if resume else "never",
+            resume="never",
             config=config,
             settings=wandb.Settings(
                 finish_timeout=60.0,

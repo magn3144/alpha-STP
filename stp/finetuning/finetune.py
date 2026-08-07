@@ -18,7 +18,7 @@ from tqdm.auto import tqdm
 
 from stp.core.records import TrainingExample
 from stp.data.datasets import load_sft_examples
-from stp.data.storage import read_json, write_json
+from stp.data.storage import write_json
 from stp.finetuning.sft_logger import SFTLogger
 from stp.inference.model import (
     ModelRuntime,
@@ -37,7 +37,7 @@ DEFAULT_TRAIN_DATA = (
 DEFAULT_VALIDATION_DATA = (
     REPOSITORY / "data/dataset/leantree_mathlib_sft/validation.jsonl"
 )
-DEFAULT_RUNS_DIR = REPOSITORY / "runs"
+DEFAULT_RUNS_DIR = REPOSITORY / "data/training_runs"
 CONFIG_FILE = "config.json"
 DATASET_STATS_FILE = "dataset_stats.json"
 VALIDATION_SUBSET_FILE = "validation_subset.json"
@@ -265,18 +265,6 @@ def learning_rate_scale(
     )
 
 
-def latest_checkpoint(run_dir: Path) -> Path | None:
-    """Return the checkpoint with the greatest optimizer step, if present."""
-
-    checkpoints_dir = run_dir / "checkpoints"
-    checkpoints = sorted(
-        checkpoint
-        for checkpoint in checkpoints_dir.glob("checkpoint_step_*")
-        if (checkpoint / "trainer_state.pt").is_file()
-    )
-    return checkpoints[-1] if checkpoints else None
-
-
 def trainer_state(
     epoch: int,
     next_batch: int,
@@ -286,11 +274,8 @@ def trainer_state(
     epoch_loss_total: float,
     epoch_examples: int,
     epoch_target_tokens: int,
-    optimizer: AdamW,
-    scheduler: Any,
-    scaler: torch.GradScaler,
 ) -> dict[str, Any]:
-    """Collect resumable model-independent training state and return it."""
+    """Collect in-memory training progress and return it."""
 
     return {
         "epoch": epoch,
@@ -301,55 +286,7 @@ def trainer_state(
         "epoch_loss_total": epoch_loss_total,
         "epoch_examples": epoch_examples,
         "epoch_target_tokens": epoch_target_tokens,
-        "optimizer": optimizer.state_dict(),
-        "scheduler": scheduler.state_dict(),
-        "scaler": scaler.state_dict(),
-        "python_random_state": random.getstate(),
-        "torch_random_state": torch.get_rng_state(),
-        "cuda_random_state": torch.cuda.get_rng_state_all(),
     }
-
-
-def save_checkpoint(
-    run_dir: Path,
-    runtime: ModelRuntime,
-    state: dict[str, Any],
-) -> Path:
-    """Atomically save Hugging Face weights and resumable trainer state."""
-
-    checkpoints_dir = run_dir / "checkpoints"
-    checkpoints_dir.mkdir(exist_ok=True)
-    update = int(state["update"])
-    checkpoint = checkpoints_dir / f"checkpoint_step_{update:08d}"
-    temporary = checkpoints_dir / f"checkpoint_step_{update:08d}.tmp"
-    temporary.mkdir()
-    runtime.model.save_pretrained(temporary)
-    runtime.tokenizer.save_pretrained(temporary)
-    torch.save(state, temporary / "trainer_state.pt")
-    temporary.rename(checkpoint)
-    return checkpoint
-
-
-def restore_trainer_state(
-    checkpoint: Path,
-    optimizer: AdamW,
-    scheduler: Any,
-    scaler: torch.GradScaler,
-) -> dict[str, Any]:
-    """Restore optimizer, scheduler, scaler, and random state from a checkpoint."""
-
-    state: dict[str, Any] = torch.load(
-        checkpoint / "trainer_state.pt",
-        map_location="cpu",
-        weights_only=False,
-    )
-    optimizer.load_state_dict(state["optimizer"])
-    scheduler.load_state_dict(state["scheduler"])
-    scaler.load_state_dict(state["scaler"])
-    random.setstate(state["python_random_state"])
-    torch.set_rng_state(state["torch_random_state"])
-    torch.cuda.set_rng_state_all(state["cuda_random_state"])
-    return state
 
 
 def append_metrics(path: Path, metrics: dict[str, Any]) -> None:
@@ -364,13 +301,10 @@ def validation_subset_indices(
     validation_size: int,
     sample_size: int,
     seed: int,
-    resume: bool,
 ) -> list[int]:
-    """Create or restore fixed validation indices and return them."""
+    """Create fixed validation indices and return them."""
 
     path = run_dir / VALIDATION_SUBSET_FILE
-    if resume:
-        return [int(index) for index in read_json(path)]
     indices = random.Random(seed).sample(
         range(validation_size),
         k=min(sample_size, validation_size),
@@ -399,12 +333,10 @@ def train_epoch(
     scheduler: Any,
     scaler: torch.GradScaler,
     logger: SFTLogger,
-    run_dir: Path,
     args: argparse.Namespace,
     state: dict[str, Any],
-    updates_per_epoch: int,
 ) -> tuple[dict[str, float | int], dict[str, Any]]:
-    """Train or resume one epoch and return aggregate metrics and next state."""
+    """Train one epoch and return aggregate metrics and next state."""
 
     epoch = int(state["epoch"])
     start_batch = int(state["next_batch"])
@@ -417,13 +349,6 @@ def train_epoch(
         args.max_sequence_length,
         args.train_microbatch_size,
     )
-    checkpoint_targets = {
-        (epoch - 1) * updates_per_epoch
-        + math.ceil(index * updates_per_epoch / args.checkpoints_per_epoch)
-        for index in range(1, args.checkpoints_per_epoch)
-        if math.ceil(index * updates_per_epoch / args.checkpoints_per_epoch)
-        < updates_per_epoch
-    }
     runtime.model.train()
     optimizer.zero_grad(set_to_none=True)
     group_loss_total = 0.0
@@ -486,29 +411,9 @@ def train_epoch(
             group_loss_total = 0.0
             group_examples = 0
 
-            if update in checkpoint_targets:
-                checkpoint = save_checkpoint(
-                    run_dir,
-                    runtime,
-                    trainer_state(
-                        epoch,
-                        int(state["next_batch"]),
-                        update,
-                        int(state["examples_seen"]),
-                        int(state["target_tokens_seen"]),
-                        float(state["epoch_loss_total"]),
-                        int(state["epoch_examples"]),
-                        int(state["epoch_target_tokens"]),
-                        optimizer,
-                        scheduler,
-                        scaler,
-                    ),
-                )
-                print(f"Saved {checkpoint}", flush=True)
-
             if (
                 update % args.validation_interval == 0
-                and int(state["next_batch"]) < total_batches
+                and batch_index + 1 < total_batches
             ):
                 validation_metrics = validate(
                     runtime,
@@ -536,9 +441,6 @@ def train_epoch(
         0.0,
         0,
         0,
-        optimizer,
-        scheduler,
-        scaler,
     )
     return training_metrics, next_state
 
@@ -546,7 +448,7 @@ def train_epoch(
 def save_final_model(run_dir: Path, runtime: ModelRuntime) -> Path:
     """Save the final Hugging Face model and tokenizer and return its directory."""
 
-    output_dir = run_dir / "checkpoint"
+    output_dir = run_dir / "final_model"
     output_dir.mkdir(exist_ok=True)
     runtime.model.config.use_cache = True
     runtime.model.save_pretrained(output_dir)
@@ -555,22 +457,16 @@ def save_final_model(run_dir: Path, runtime: ModelRuntime) -> Path:
 
 
 def train(args: argparse.Namespace) -> Path:
-    """Run or resume whole-proof causal supervised fine-tuning."""
+    """Run whole-proof causal supervised fine-tuning."""
 
     run_dir = args.runs_dir / args.run_name
     config_path = run_dir / CONFIG_FILE
-    if args.resume:
-        if not run_dir.is_dir():
-            raise FileNotFoundError(f"SFT run does not exist: {run_dir}")
-        saved_config = read_json(config_path)
-        args.wandb_run_id = str(saved_config["wandb_run_id"])
-    elif run_dir.exists():
+    if config_path.exists():
         raise FileExistsError(f"SFT run already exists: {run_dir}")
-    else:
-        run_dir.mkdir(parents=True)
-        config = serializable_args(args)
-        config["model_revision"] = model_revision(args.model)
-        write_json(config_path, config)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    config = serializable_args(args)
+    config["model_revision"] = model_revision(args.model)
+    write_json(config_path, config)
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -618,17 +514,12 @@ def train(args: argparse.Namespace) -> Path:
         len(validation_examples),
         args.validation_samples,
         args.seed,
-        args.resume,
     )
     frequent_validation_examples = [
         validation_examples[index] for index in subset_indices
     ]
 
-    checkpoint = latest_checkpoint(run_dir) if args.resume else None
-    runtime = load_runtime(
-        checkpoint or args.model,
-        checkpoint or args.tokenizer,
-    )
+    runtime = load_runtime(args.model, args.tokenizer)
     del tokenizer
     runtime.model.train()
     runtime.model.config.use_cache = False
@@ -669,20 +560,12 @@ def train(args: argparse.Namespace) -> Path:
         "epoch_examples": 0,
         "epoch_target_tokens": 0,
     }
-    if checkpoint is not None:
-        state = restore_trainer_state(
-            checkpoint,
-            optimizer,
-            scheduler,
-            scaler,
-        )
 
     logger = SFTLogger(
         args.run_name,
         args.wandb_run_id,
         args.wandb_name,
         args.wandb_mode,
-        args.resume,
         serializable_args(args),
     )
     metrics_path = run_dir / METRICS_FILE
@@ -697,10 +580,8 @@ def train(args: argparse.Namespace) -> Path:
                 scheduler,
                 scaler,
                 logger,
-                run_dir,
                 args,
                 state,
-                updates_per_epoch,
             )
             validation_metrics = validate(
                 runtime,
@@ -720,11 +601,10 @@ def train(args: argparse.Namespace) -> Path:
                 validation_metrics,
                 len(validation_examples),
             )
-            checkpoint = save_checkpoint(run_dir, runtime, state)
             print(
                 f"Finished epoch {epoch}/{args.epochs}: train loss "
                 f"{training_metrics['loss']:.4f}, validation loss "
-                f"{validation_metrics['loss']:.4f}; saved {checkpoint}",
+                f"{validation_metrics['loss']:.4f}",
                 flush=True,
             )
         output_dir = save_final_model(run_dir, runtime)
@@ -766,7 +646,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--weight-decay", type=float, default=0.01)
     parser.add_argument("--warmup-steps", type=int, default=50)
     parser.add_argument("--max-grad-norm", type=float, default=1.0)
-    parser.add_argument("--checkpoints-per-epoch", type=positive_int, default=1)
     parser.add_argument("--log-every", type=positive_int, default=100)
     parser.add_argument("--validation-interval", type=positive_int, default=500)
     parser.add_argument("--validation-samples", type=positive_int, default=512)
@@ -784,7 +663,6 @@ def parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=True,
     )
-    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     args.tokenizer = args.tokenizer or args.model
     args.wandb_run_id = uuid.uuid4().hex
