@@ -28,7 +28,7 @@ from stp.evaluate_difficulty_score.solver_processes import (
 from stp.self_play.generate import make_proof_requests
 
 
-RETRY_COUNT = 32
+RETRY_COUNT = 16
 RETRY_ROLLOUTS = 200
 LARGE_SEARCH_ROLLOUTS = 1024
 
@@ -38,7 +38,7 @@ def parse_args() -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(
         description=(
-            "Compare 32 AlphaProof retries with one large-search difficulty "
+            "Compare 16 AlphaProof retries with one large-search difficulty "
             "score on Numina Lean theorems."
         ),
     )
