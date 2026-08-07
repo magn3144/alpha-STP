@@ -234,7 +234,7 @@ def embed_texts(
     return np.concatenate(embeddings) if embeddings else np.empty((0, 0))
 
 
-def _encode_example(
+def encode_training_example(
     example: TrainingExample,
     tokenizer: Any,
     max_length: int,
@@ -254,7 +254,7 @@ def _encode_example(
     return input_ids, labels, example.weight
 
 
-def _collate(
+def collate_training_examples(
     examples: Sequence[TrainingExample],
     tokenizer: Any,
     max_length: int,
@@ -262,7 +262,8 @@ def _collate(
     """Pad encoded examples into one weighted training batch."""
 
     encoded = [
-        _encode_example(example, tokenizer, max_length) for example in examples
+        encode_training_example(example, tokenizer, max_length)
+        for example in examples
     ]
     length = max(len(item[0]) for item in encoded)
     input_ids = []
@@ -318,7 +319,7 @@ def train_model(
         batch_size=settings.train_microbatch_size,
         shuffle=True,
         generator=generator,
-        collate_fn=lambda batch: _collate(
+        collate_fn=lambda batch: collate_training_examples(
             batch,
             tokenizer,
             settings.max_sequence_length,
