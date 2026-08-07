@@ -16,6 +16,11 @@ cd /work3/s204164/alpha-STP
 module load cuda/12.6.3
 . .venv/bin/activate
 
+set -a
+. ./.env
+set +a
+: "${WANDB_API_KEY:?WANDB_API_KEY must be set in .env}"
+
 export OMP_NUM_THREADS=8
 export MKL_NUM_THREADS=8
 export TOKENIZERS_PARALLELISM=false
@@ -27,4 +32,5 @@ python -u -m stp.finetuning.finetune codegen2-1b-sft \
     --validation-batch-size 1 \
     --gradient-accumulation-steps 16 \
     --gradient-checkpointing \
+    --wandb-mode online \
     "$@"
