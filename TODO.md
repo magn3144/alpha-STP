@@ -1,4 +1,4 @@
 - [ ] Update WANDB setup
-- [ ] Convert .sh experiment scripts to HPC format
+- [X] Convert .sh experiment scripts to .py scripts
 - [ ] Modify code so it runs on GPU
 - [ ] Debug code in interactive GPU mode
