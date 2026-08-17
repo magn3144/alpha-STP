@@ -16,4 +16,24 @@ bsub < jobs/rl_steps.sh
 
 The generation jobs use the allocated GPU for vLLM or embeddings and the allocated CPU slots for Lean verification. Training starts after generation and uses the same GPU through JAX/Levanter. The inference model must fit on one GPU, and single-GPU full-model training requires enough memory on the A100 assigned by LSF.
 
+## Weights & Biases
+
+Training metrics are logged to Weights & Biases. Create a W&B project, then set its entity (your username or team) and project name in the ignored `jobs/config.sh`:
+
+```sh
+WANDB_ENTITY=your-wandb-username
+WANDB_PROJECT=your-project-name
+```
+
+Authenticate once on DTU using the same virtual environment configured by `STP_VENV`:
+
+```sh
+source /work3/USERID/venvs/alpha-stp/bin/activate
+wandb login --relogin --verify
+```
+
+Paste the API key from your W&B user settings when prompted. The login is stored in your home directory and is available to jobs submitted under your account. Do not add the API key to `jobs/config.sh` or commit it to the repository.
+
+Both the data metrics and the Levanter training metrics use `WANDB_ENTITY` and `WANDB_PROJECT` and resume under the same W&B run.
+
 This implementation of "STP: Self-play LLM Theorem Provers with Iterative Conjecturing and Proving" has been modified to run on GPUs. It also supports using my unofficial implementation of AlphaProof as the solver instead of an LLM.

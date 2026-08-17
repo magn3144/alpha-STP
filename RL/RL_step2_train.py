@@ -154,9 +154,10 @@ if __name__ == "__main__":
     train_ds += new_ds_conjecture
 
     wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))
-    wandb_project = "STP_deepseek"
+    wandb_entity = os.environ["WANDB_ENTITY"]
+    wandb_project = os.environ["WANDB_PROJECT"]
     wandb_run_name = '-'.join(args.exp_dir.split('/')[-2:])
-    wandb.init(project=wandb_project, name=wandb_run_name, id=wandb_id, resume="allow")
+    wandb.init(entity=wandb_entity, project=wandb_project, name=wandb_run_name, id=wandb_id, resume="allow")
     logging.info(f'Training dataset size = {len(train_ds)}')
 
     def compute_metric(data, key):
@@ -191,6 +192,6 @@ if __name__ == "__main__":
     # train the actor
     max_iters = max(len(train_ds) * args.epoch // BATCH_SIZE, 5)
     train_model(os.path.join(args.save_dir, 'RL_model'), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'), 
-                    args, wandb_project, wandb_id)
+                    args, wandb_entity, wandb_project, wandb_id)
     duration = datetime.now() - start_time
     logging.info('Training time: ' + str(duration))

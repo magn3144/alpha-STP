@@ -651,6 +651,7 @@ def train_model(
         max_iters: int, 
         train_data_path: str, 
         args: Any, 
+        wandb_entity: str,
         wandb_project: str, 
         wandb_id: str, 
         eval_data_path: Optional[str] = None, 
@@ -663,6 +664,7 @@ def train_model(
     cleanup_dir(output_dir)
 
     training_config = {
+            'trainer.wandb.entity': wandb_entity,
             'trainer.wandb.project': wandb_project,
             'trainer.wandb.resume': 'must',
             'trainer.wandb.id': wandb_id,
