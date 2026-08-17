@@ -1,79 +1,31 @@
 import os
-os.environ['TOKENIZERS_PARALLELISM'] = 'false'
+from typing import List
+
 import ray
 import torch
-import torch_xla
-import torch_xla.core.xla_model as xm
-from transformers import AutoTokenizer, AutoModel
-import argparse
-import time
-from typing import List, Dict
-import numpy as np
+from transformers import AutoModel, AutoTokenizer
 
-@ray.remote
-class LockManager:
-    def __init__(self):
-        self.locked = 3
+os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
-    def acquire(self):
-        if self.locked > 0:
-            self.locked -= 1
-            return True
-        else:
-            return False
-
-    def release(self):
-        self.locked += 1
-
-@ray.remote(resources={"TPU": 1})  # Allocate one TPU per worker
+@ray.remote(num_cpus=1, num_gpus=1)
 class EmbeddingWorker:
-    def __init__(self, model_name: str, model_load_lock: ray.actor.ActorHandle = None, tokenizer_path: str = "deepseek-ai/DeepSeek-Prover-V1.5-SFT"):
+    def __init__(self, model_name: str, tokenizer_path: str):
         """
         Initializes the ModelWorker by loading the tokenizer and model.
-        The model is set to half-precision for faster inference and moved to the TPU device.
+        The model is set to half-precision and moved to the CUDA device assigned by Ray.
 
         Args:
             model_name (str): The name of the Hugging Face model to load.
-            model_load_lock (ray.actor.ActorHandle): A Ray actor managing a distributed lock.
         """
-        # Initialize the tokenizer (hardcoded as per user instruction)
-        self.tokenizer = AutoTokenizer.from_pretrained("deepseek-ai/DeepSeek-Prover-V1.5-SFT")
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
         self.tokenizer.pad_token = self.tokenizer.eos_token  # Set the pad token to the end-of-sequence token
 
-        # Acquire the Ray lock before loading the model
-        if model_load_lock is not None:
-            # to handle the OOM error caused by the model loading
-            while not ray.get(model_load_lock.acquire.remote()):
-                time.sleep(2)
-        try:
-            # Load the model from Hugging Face
-            self.model = AutoModel.from_pretrained(model_name)
-            self.model.eval()
-            self.model.half()  # Use half-precision for faster inference; adjust if necessary for TPUs
-            self.device = xm.xla_device()  # Set device to TPU
-            self.model.to(self.device)
-        finally:
-            # Ensure the lock is released even if an error occurs
-            if model_load_lock is not None:
-                ray.get(model_load_lock.release.remote())
+        self.model = AutoModel.from_pretrained(model_name, torch_dtype=torch.float16)
+        self.model.eval()
+        self.device = torch.device('cuda')
+        self.model.to(self.device)
 
-        # Compile the model for optimized performance if possible
-        # Note: Torch XLA may handle optimizations differently
-        # if hasattr(torch, "compile"):
-        #    self.model = torch.compile(self.model, dynamic=True)
-        #    self.model = torch.compile(self.model)
-                
-    def initialize(self):
-        """
-        Dummy method to confirm initialization.
-        This can be expanded if additional setup is required.
-
-        Returns:
-            None
-        """
-        return None
-
-    def compute_last_hidden_state(self, texts: tuple[str]) -> List[List[float]]:
+    def compute_last_hidden_state(self, texts: tuple[str, ...]) -> List[List[float]]:
         texts = list(texts)
         # Tokenize input texts with padding and truncation
         inputs = self.tokenizer(
@@ -84,7 +36,7 @@ class EmbeddingWorker:
             return_tensors="pt"        # Return PyTorch tensors
         )
         
-        # Move input tensors to the TPU device
+        # Move input tensors to the CUDA device
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
 
         # Forward pass through the model without computing gradients
@@ -122,25 +74,10 @@ class EmbeddingWorker:
         # Shape: [batch_size, hidden_size]
         mean_hidden = sum_hidden / num_tokens  # Shape: [batch_size, 768]
 
-        # Synchronize XLA device to ensure computations are complete
-        xm.mark_step()
-
         # Move the tensor to CPU and convert to NumPy array for serialization
         return mean_hidden.cpu().numpy().tolist()
-    
     # Helper function to submit a batch and return its start index with embeddings
     def submit_batch(self, batch):
         ids, texts = zip(*batch)
         embeddings = self.compute_last_hidden_state(texts)
         return zip(ids, embeddings)
-
-if __name__ == "__main__":
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Run a FastAPI server with a Hugging Face model.")
-    parser.add_argument("--model_name", type=str, required=True, help="The name of the Hugging Face model to use.")
-    args = parser.parse_args()
-
-    model_load_lock = LockManager.remote()
-    model_workers = EmbeddingWorker.remote(args.model_name, model_load_lock)
-    result = ray.get(model_workers.compute_last_hidden_state.remote([' test' * 20] * 12))
-    print(result)

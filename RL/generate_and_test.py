@@ -7,7 +7,7 @@ import numpy as np
 from ray.util import ActorPool
 from transformers import AutoTokenizer
 from utils.model_utils import create_inference_actors, init_ray_cluster, get_prompt
-from utils.gcloud_utils import read_file, write_data
+from utils.file_utils import read_file, write_data
 from utils.RL_utils import generate_and_test, collect_trajectories, insert_lemma, REPO_DIR
 from copy import deepcopy
 
@@ -21,8 +21,7 @@ def main(args: argparse.Namespace):
     tokenizer.truncation_side = 'left'
     tokenizer.pad_token = tokenizer.eos_token
 
-    if 'gs://' not in args.exp_dir:
-        os.makedirs(args.exp_dir, exist_ok = True)
+    os.makedirs(args.exp_dir, exist_ok=True)
 
     lemmas_to_generate = []
     lemma_mapping = {}

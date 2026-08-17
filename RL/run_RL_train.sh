@@ -1,23 +1,25 @@
 #!/bin/bash
-source .bash_alias.sh
-EXP_DIR="$STORAGE/STP_LeanWorkbook_merged"
+
+set -euo pipefail
+
+: "${CUDA_VISIBLE_DEVICES:?CUDA_VISIBLE_DEVICES must be set by LSF}"
+: "${LSB_DJOB_NUMPROC:?LSB_DJOB_NUMPROC must be set by LSF}"
+: "${STORAGE:?Set STORAGE to a local DTU filesystem path}"
+: "${EXP_DIR:?Set EXP_DIR to the final training output directory}"
+: "${TRAIN_FROM:?Set TRAIN_FROM to a local path or Hugging Face model name}"
+: "${SFT_DATASET:?Set SFT_DATASET to the local SFT dataset path}"
+: "${MERGE_FROM:?Set MERGE_FROM to the self-play experiment directory}"
+: "${MERGE_FROM_ROUNDS:?Set MERGE_FROM_ROUNDS}"
+
 DATASET_CONFIG="./dataset_configs/leanworkbook.json"
-TRAIN_FROM="deepseek-ai/DeepSeek-Prover-V1.5-SFT"
-SFT_DATASET="$STORAGE/data/SFT/mathlib.json"
 
-TPU_NAME=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/description)
-ZONE_FULL_PATH=$(curl -s -H "Metadata-Flavor: Google" http://metadata.google.internal/computeMetadata/v1/instance/zone)
-ZONE=$(echo "$ZONE_FULL_PATH" | awk -F'/' '{print $NF}')
-
-source ~/venv_vllm/bin/activate
-
-WANDB_API_KEY=$WANDB_API_KEY TPU_NAME=$TPU_NAME ZONE=$ZONE python RL_step3_final_model.py \
-    --base_model $TRAIN_FROM \
-    --exp_dir $EXP_DIR \
-    --sft_dataset $SFT_DATASET \
+python -u RL_step3_final_model.py \
+    --base_model "$TRAIN_FROM" \
+    --exp_dir "$EXP_DIR" \
+    --sft_dataset "$SFT_DATASET" \
     --dataset_config "$DATASET_CONFIG" \
     --epoch 1 \
     --lr 1e-4 \
     --include_synthetic_examples \
-    --merge_from "$STORAGE/STP_LeanWorkbook" \
-    --merge_from_rounds 12
+    --merge_from "$MERGE_FROM" \
+    --merge_from_rounds "$MERGE_FROM_ROUNDS"

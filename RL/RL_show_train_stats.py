@@ -11,7 +11,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import get_lemma_key, insert_lemma
-from utils.gcloud_utils import read_file, path_exists
+from utils.file_utils import path_exists, read_file
 from utils.RL_utils import load_ds_from_config
 
 BATCH_SIZE = 2048

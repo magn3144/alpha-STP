@@ -12,7 +12,7 @@ import random; random.seed(0)  # Set a random seed for reproducibility
 import argparse
 from collections import defaultdict
 from transformers import AutoTokenizer
-from utils.gcloud_utils import read_file, write_data
+from utils.file_utils import read_file, write_data
 from utils.RL_utils import REPO_DIR
 
 proofnet_inputs = read_file(os.path.join(REPO_DIR, "assets/data/test/proofnet.jsonl"))

@@ -5,22 +5,29 @@ import time
 import pickle
 import psutil
 import logging
+import shlex
+import subprocess
+import sys
 from datetime import datetime
 import numpy as np
 from copy import deepcopy
 from tqdm.auto import tqdm
 import ray
 import gc
-import hashlib
 import threading
 from ray.util import ActorPool
 from collections import defaultdict
-from utils.model_utils import right_truncate, insert_lemma, get_lemma_key, update_lemma_mapping
+from utils.model_utils import (
+    get_lemma_key,
+    insert_lemma,
+    right_truncate,
+    update_lemma_mapping,
+)
 from utils.model_utils import ray_completion, ray_get_prompt, create_inference_actors, create_embedding_actors, ray_get_embeddings
 from typing import Any, Dict, List, Tuple, Set, Callable, Optional
-from utils.gcloud_utils import read_file, write_data, cleanup_dir, move_file, execute_on_all_workers, copy_dir
+from utils.file_utils import cleanup_dir, copy_dir, move_file, read_file, write_data
 from utils.model_utils import END_THM, START_LEMMA_STMT
-from utils.prover.lean.verifier import create_ray_lean4_actors, TEST_BATCH_SIZE, DEFAULT_TIMEOUT
+from utils.prover.lean.verifier import create_ray_lean4_actors, TEST_BATCH_SIZE
 from concurrent.futures import ProcessPoolExecutor
 
 BATCH_SIZE = 2048
@@ -33,8 +40,6 @@ CPU_PER_TASK = 1.5
 __DEBUG__ = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 REPO_DIR = os.path.abspath(os.path.join(__file__, '../../..'))
 STORAGE = os.getenv('STORAGE', None)
-HUGGING_FACE_HUB_TOKEN = os.getenv('HUGGING_FACE_HUB_TOKEN', None)
-WANDB_API_KEY = os.getenv('WANDB_API_KEY', None)
 assert STORAGE is not None, 'STORAGE is not set'
 
 def merge_labels(labels: List[str], new_labels: List[str]) -> List[str]:
@@ -143,8 +148,12 @@ def generate_and_test(
     if ray_inference_actors is not None:
         inference_pool = ActorPool(ray_inference_actors)
 
-    ray_test_actors = create_ray_lean4_actors(reserved_cpus=4, cpus_per_task=cpus_per_task, 
-                                              collect_premises=collect_premises, timeout=DEFAULT_TIMEOUT * test_batch_size)
+    reserved_cpus = 4 + len(ray_inference_actors)
+    ray_test_actors = create_ray_lean4_actors(
+        reserved_cpus=reserved_cpus,
+        cpus_per_task=cpus_per_task,
+        collect_premises=collect_premises,
+    )
     tester_pool = ActorPool(ray_test_actors)
 
     save_file_generation = os.path.join(save_dir, f'generated_proofs.json') if save_dir is not None else None
@@ -252,10 +261,11 @@ def generate_and_test(
         print('Stage 2: rerunning timed-out jobs...')
         for actor in ray_test_actors:
             ray.kill(actor)
-        execute_on_all_workers('killall repl; killall lake')
-
         # allow more memory for stage 2 because the failed jobs are likely to be more memory-consuming
-        ray_test_actors = create_ray_lean4_actors(reserved_cpus = 4, cpus_per_task=cpus_per_task_stage2, timeout=DEFAULT_TIMEOUT)
+        ray_test_actors = create_ray_lean4_actors(
+            reserved_cpus=reserved_cpus,
+            cpus_per_task=cpus_per_task_stage2,
+        )
         tester_pool = ActorPool(ray_test_actors)
 
         new_testing_tasks = []
@@ -283,8 +293,6 @@ def generate_and_test(
         
         for actor in ray_test_actors:
             ray.kill(actor)
-        execute_on_all_workers('killall repl; killall lake')
-
         # update generated lemmas
         nr_failed = 0
         for test_info in generated_proofs_dedup:
@@ -637,7 +645,6 @@ def wasserstein_matching(P: List[Dict], Q: List[Dict], ray_embedding_actors: Lis
     logging.info(f'Wasserstein matching: #inputs = {N}, #matched = {len(ret)}')
     return ret
 
-from utils.model_utils import copy_checkpoints_all, CHECKPOINT_TMP_DIR, get_lemma_key
 def train_model(
         model_dir: str, 
         train_from: str,
@@ -648,11 +655,6 @@ def train_model(
         wandb_id: str, 
         eval_data_path: Optional[str] = None, 
 ) -> None:
-    if 'gs://' in train_from:
-        local_path = copy_checkpoints_all(train_from, CHECKPOINT_TMP_DIR)
-    else:
-        local_path = train_from
-
     model_name = model_dir.split('/')[-1]
     logging.info(f'training {model_name}...')
     # training
@@ -672,7 +674,7 @@ def train_model(
             'train_data_cache_dir': os.path.join(data_cache_dir, 'train'),
             'eval_data': os.path.join(STORAGE, 'data/SFT/eval.json'),
             'eval_data_cache_dir': os.path.join(STORAGE, 'data/SFT/eval_cache'),
-            'model_name_or_path': local_path,
+            'model_name_or_path': train_from,
             'save_freq': max_iters - 1,
             'config_path': 'levanter/config/RL_base.yaml',
             'hf_save_path': os.path.join(output_dir, 'hf_checkpoints'),
@@ -687,18 +689,20 @@ def train_model(
         }
 
     LEV_ROOT = os.path.join(REPO_DIR, 'levanter')
-    training_cmd = f'source ~/venv310/bin/activate; mkdir -p ~/.logs/; cd {REPO_DIR}; ray stop; ' \
-                    f'HUGGING_FACE_HUB_TOKEN={HUGGING_FACE_HUB_TOKEN} WANDB_API_KEY={WANDB_API_KEY} PYTHONPATH=${LEV_ROOT}:${LEV_ROOT}/src:${LEV_ROOT}/examples:$PYTHONPATH ' \
-                    'python levanter/examples/weighted_lm.py'
+    training_cmd = [sys.executable, 'levanter/examples/weighted_lm.py']
     for k, v in training_config.items():
+        training_cmd.append(f'--{k}')
         if v is None:
-            training_cmd += f' --{k}'
-        else:
-            training_cmd += f' --{k} {v}'
-    command_hash = hashlib.md5(training_cmd.encode('utf-8')).hexdigest()
-    training_cmd += f' &> ~/.logs/{command_hash}.log'
-    logging.debug(training_cmd)
-    execute_on_all_workers(training_cmd, expect_succ=True)
+            continue
+        training_cmd.append(str(v))
+
+    env = os.environ.copy()
+    python_paths = [LEV_ROOT, os.path.join(LEV_ROOT, 'src'), os.path.join(LEV_ROOT, 'examples')]
+    if env.get('PYTHONPATH'):
+        python_paths.append(env['PYTHONPATH'])
+    env['PYTHONPATH'] = os.pathsep.join(python_paths)
+    logging.debug(shlex.join(training_cmd))
+    subprocess.run(training_cmd, cwd=REPO_DIR, env=env, check=True)
 
     # move the trained model
     trained_model_path = os.path.join(output_dir, 'hf_checkpoints', wandb_id, f'step-{max_iters - 1}')

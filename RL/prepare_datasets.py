@@ -1,7 +1,7 @@
 import os
 import json
 from datasets import load_dataset
-from utils.gcloud_utils import read_file, write_data, path_exists
+from utils.file_utils import path_exists, read_file, write_data
 from utils.RL_utils import STORAGE
 
 if __name__ == '__main__':

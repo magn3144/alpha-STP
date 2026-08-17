@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import START_THM, START_LEMMA_STMT, END_THM, INVOKED_LEMMA, PROVER_PROMPT
 from utils.RL_utils import update_succ_lemmas, REPO_DIR, train_model, BATCH_SIZE
-from utils.gcloud_utils import read_file, write_data, execute_on_all_workers, path_exists
+from utils.file_utils import path_exists, read_file, write_data
 
 def compute_weight(proof, verify_time = 0):
     return np.exp(-0.001 * len(proof) - 0.01 * verify_time)
@@ -119,8 +119,7 @@ if __name__ == "__main__":
         logging.warning(f"Dataset {args.sft_dataset} contains no data...")
         train_ds = []
     
-    if 'gs://' not in args.exp_dir:
-        os.makedirs(args.exp_dir, exist_ok = True)
+    os.makedirs(args.exp_dir, exist_ok=True)
 
     generated_proofs = []
     conjecture_examples = []
@@ -154,7 +153,6 @@ if __name__ == "__main__":
     logging.info(f'Number of new easy to hard examples: {len(new_ds_conjecture)}')
     train_ds += new_ds_conjecture
 
-    execute_on_all_workers("echo 'connection succ'", expect_succ=True) # health check
     wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))
     wandb_project = "STP_deepseek"
     wandb_run_name = '-'.join(args.exp_dir.split('/')[-2:])

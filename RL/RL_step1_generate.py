@@ -10,8 +10,8 @@ import numpy as np
 import gc
 from collections import defaultdict
 from copy import deepcopy
-from utils.gcloud_utils import read_file, write_data, path_exists, execute_on_all_workers
-from utils.model_utils import init_ray_cluster, CHECKPOINT_TMP_DIR
+from utils.file_utils import path_exists, read_file, write_data
+from utils.model_utils import init_ray_cluster
 from utils.RL_utils import collect_trajectories, collect_conjecture, load_ds_from_config
 from utils.RL_utils import Sampler_base, Sampler_naive, __DEBUG__, REPO_DIR
 
@@ -39,8 +39,7 @@ if __name__ == "__main__":
         logging.warning(f"Dataset already exists. Exiting...")
         exit(0)
 
-    if 'gs://' not in args.exp_dir:
-        os.makedirs(args.exp_dir, exist_ok = True)
+    os.makedirs(args.exp_dir, exist_ok=True)
 
     formatted_ds = load_ds_from_config(args.dataset_config)
     if __DEBUG__:
@@ -106,8 +105,3 @@ if __name__ == "__main__":
     write_data(pickle.dumps(sampler.to_dict()), os.path.join(args.exp_dir, 'sampler.pkl'), 'pickle')
     write_data(json.dumps([test_info for test_info in sampler.generated_proofs if test_info['round'] >= round - 2]), os.path.join(args.exp_dir, 'generated_proofs.json'), 'json')
     write_data(json.dumps(sampler.valid_conjecture_examples), os.path.join(args.exp_dir, 'conjecture_examples.json'), 'json')
-
-    if not __DEBUG__:
-        logging.debug('Removing temporary files...')
-        execute_on_all_workers(f'rm -r {CHECKPOINT_TMP_DIR}; mkdir -p {CHECKPOINT_TMP_DIR}')
-        logging.debug('Done.')

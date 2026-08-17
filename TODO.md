@@ -1,0 +1,4 @@
+- [ ] Update WANDB setup
+- [ ] Convert .sh experiment scripts to HPC format
+- [ ] Modify code so it runs on GPU
+- [ ] Debug code in interactive GPU mode
