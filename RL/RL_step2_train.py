@@ -100,7 +100,6 @@ if __name__ == "__main__":
     parser.add_argument("--epoch", type=int, default=2)
     parser.add_argument("--exp_dir", type=str, default=None)
     parser.add_argument("--base_model", type=str, default=None)
-    parser.add_argument("--tokenizer_path", type=str, default="deepseek-ai/DeepSeek-Prover-V1.5-SFT")
     parser.add_argument("--sft_dataset", type=str, default=None, help="SFT dataset in the training format")
     parser.add_argument("--save_dir", type=str, default=None)
     args = parser.parse_args()

@@ -26,7 +26,6 @@ if __name__ == "__main__":
     parser.add_argument("--exp_dir", type=str, default=None)
     parser.add_argument("--dataset_config", type=str, default=None)
     parser.add_argument("--temperature", type=float, default=1.0)
-    parser.add_argument("--tokenizer_path", type=str, default="deepseek-ai/DeepSeek-Prover-V1.5-SFT")
     parser.add_argument("--sampler", type=str, default='Sampler_conjecture')
     parser.add_argument("--conjecture_multiplier", type=int, default=1)
     parser.add_argument("--samples_per_statement", type=int)
@@ -78,7 +77,7 @@ if __name__ == "__main__":
         collect_trajectories(inference_pool, nr_actors, selected_lemmas, \
                                            MAX_LENGTH, seed, args.temperature, cache_dir=os.path.join(args.exp_dir, 'sampler_ckpt'))
     
-    generated_proofs, valid_conjecture_examples = sampler.generate(args.model, args.tokenizer_path, 
+    generated_proofs, valid_conjecture_examples = sampler.generate(args.model, args.model,
             lemmas_to_generate, args.seed, collect_traj,
             save_dir=os.path.join(args.exp_dir, 'sampler_ckpt'),
             collect_conjecture=collect_conjecture_fn, conjecture_multiplier=args.conjecture_multiplier,

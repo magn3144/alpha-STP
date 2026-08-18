@@ -9,6 +9,8 @@ def main(args):
     run_python(
         REPO_DIR / 'levanter/examples/weighted_lm.py',
         '--config_path', REPO_DIR / 'levanter/config/sft.yaml',
+        '--model_name_or_path', args.base_model,
+        '--tokenizer_name_or_path', args.base_model,
         '--trainer.checkpointer.base_path', storage / 'SFT_ckpt',
         '--hf_save_path', storage / 'SFT',
         '--train_data', storage / 'data/SFT/mathlib_leanworkbook.json',
@@ -24,5 +26,6 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run supervised fine-tuning with Levanter.')
     parser.add_argument('--storage', required=True)
+    parser.add_argument('--base-model', required=True)
     parser.add_argument('--dry-run', action='store_true')
     main(parser.parse_args())

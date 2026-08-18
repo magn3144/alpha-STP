@@ -677,6 +677,7 @@ def train_model(
             'eval_data': os.path.join(STORAGE, 'data/SFT/eval.json'),
             'eval_data_cache_dir': os.path.join(STORAGE, 'data/SFT/eval_cache'),
             'model_name_or_path': train_from,
+            'tokenizer_name_or_path': train_from,
             'save_freq': max_iters - 1,
             'config_path': 'levanter/config/RL_base.yaml',
             'hf_save_path': os.path.join(output_dir, 'hf_checkpoints'),

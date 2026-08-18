@@ -5,7 +5,6 @@ import argparse
 import logging
 import numpy as np
 from ray.util import ActorPool
-from transformers import AutoTokenizer
 from utils.model_utils import create_inference_actors, init_ray_cluster, get_prompt
 from utils.file_utils import read_file, write_data
 from utils.RL_utils import generate_and_test, collect_trajectories, insert_lemma, REPO_DIR
@@ -17,10 +16,6 @@ def main(args: argparse.Namespace):
     args.save_file_path = os.path.join(args.exp_dir, f'generated_proofs_{args.save_file_name}.jsonl')
     print(args)
     
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_path)
-    tokenizer.truncation_side = 'left'
-    tokenizer.pad_token = tokenizer.eos_token
-
     os.makedirs(args.exp_dir, exist_ok=True)
 
     lemmas_to_generate = []
@@ -54,7 +49,7 @@ def main(args: argparse.Namespace):
         collect_trajectories(inference_pool, nr_actors, selected_lemmas, \
                                            MAX_LENGTH, seed, args.temperature, cache_dir=os.path.join(args.exp_dir, 'sampler_ckpt'))
     init_ray_cluster()
-    ray_inference_actors, model_dir = create_inference_actors(args.model, args.tokenizer_path, enable_prefix_caching=False)
+    ray_inference_actors, model_dir = create_inference_actors(args.model, args.model, enable_prefix_caching=False)
 
     rng = np.random.default_rng(0)
     rng.shuffle(lemmas_to_generate)
@@ -69,7 +64,6 @@ if __name__ == "__main__":
         description="Generate and test proofs."
     )
     parser.add_argument("--model", type=str, default=None)
-    parser.add_argument("--tokenizer_path", type=str, default='deepseek-ai/DeepSeek-Prover-V1.5-SFT')
     parser.add_argument("--exp_dir", type=str, default=None)
     parser.add_argument("--nr_samples", type=int, default=16)
     parser.add_argument("--save_file_name", type=str, default=None)
