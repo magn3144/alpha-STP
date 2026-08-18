@@ -174,3 +174,5 @@ cython_debug/
 jobs/config.sh
 jobs/logs/*.out
 jobs/logs/*.err
+
+storage/

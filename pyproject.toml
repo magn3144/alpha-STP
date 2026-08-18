@@ -1,0 +1,39 @@
+[project]
+name = "alpha-stp"
+version = "0.1.0"
+description = "Self-play LLM theorem proving experiments"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "datasets==2.21.0",
+    "easydict",
+    "equinox==0.11.7",
+    "func-timeout==4.3.5",
+    "haliax==1.4.dev321",
+    "jax==0.4.34",
+    "jax[cuda12]==0.4.34; sys_platform == 'linux'",
+    "jaxtyping==0.2.34",
+    "levanter",
+    "ml-dtypes==0.5.0",
+    "numpy==1.26.4",
+    "optax==0.2.2",
+    "pandas==2.2.2",
+    "psutil==6.0.0",
+    "pyarrow==17.0.0",
+    "pytz",
+    "ray[default]==2.34.0",
+    "scipy==1.12.0",
+    "tensorstore==0.1.63",
+    "termcolor",
+    "torch==2.5.1",
+    "tqdm==4.66.5",
+    "transformers==4.45.2",
+    "vllm==0.6.6; sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "wandb==0.17.5",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+levanter = { path = "levanter", editable = true }

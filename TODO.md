@@ -1,4 +1,4 @@
-- [ ] Update WANDB setup
+- [X] Update WANDB setup
 - [X] Convert .sh experiment scripts to .py scripts
 - [X] Modify code so it runs on GPU
 - [ ] Debug code in interactive GPU mode

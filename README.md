@@ -6,6 +6,21 @@ This implementation of STP has been adapted for a single DTU LSF node with one o
 
 Experiment orchestration is implemented as Python CLIs under `RL/`. Scheduler resource requests and DTU environment setup are kept separately under `jobs/`.
 
+Create the local macOS environment from the repository root:
+
+```sh
+uv sync --locked
+```
+
+On DTU, load the selected Python and CUDA modules and create a separate Linux environment from the same lockfile:
+
+```sh
+module load python3/3.10.18 cuda/12.1.1
+uv sync --locked --python "$(command -v python3)"
+```
+
+The lockfile selects CPU JAX on macOS and CUDA JAX plus vLLM on Linux. Do not copy `.venv` between the two systems; run `uv sync --locked` in each clone.
+
 All included job scripts request one A100 from the `gpua100` queue. See [`jobs/README.md`](jobs/README.md) for configuration and submission instructions. In short:
 
 ```sh
@@ -28,7 +43,7 @@ WANDB_PROJECT=your-project-name
 Authenticate once on DTU using the same virtual environment configured by `STP_VENV`:
 
 ```sh
-source /work3/USERID/venvs/alpha-stp/bin/activate
+source .venv/bin/activate
 wandb login --relogin --verify
 ```
 

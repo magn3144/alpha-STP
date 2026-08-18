@@ -8,3 +8,4 @@
 - After writing code fix any potential Pylance errors.
 - If CLI Pyright misses VS Code Pylance errors, inspect the VS Code Python Language Server log for interpreter and editable-install resolution issues.
 - Dont write tests. Its not necessary for this project.
+- Dont edit the README.md, unless I explicitly ask you to.
