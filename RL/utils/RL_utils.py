@@ -148,7 +148,12 @@ def generate_and_test(
     if ray_inference_actors is not None:
         inference_pool = ActorPool(ray_inference_actors)
 
-    reserved_cpus = 4 + len(ray_inference_actors)
+    if __DEBUG__:
+        reserved_cpus = 0
+        cpus_per_task = 1
+        cpus_per_task_stage2 = 1
+    else:
+        reserved_cpus = 4 + len(ray_inference_actors)
     ray_test_actors = create_ray_lean4_actors(
         reserved_cpus=reserved_cpus,
         cpus_per_task=cpus_per_task,

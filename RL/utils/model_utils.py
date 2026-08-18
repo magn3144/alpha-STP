@@ -51,7 +51,7 @@ def right_truncate(s, tokenizer, max_tokens):
     return tokenizer.decode(tokens, skip_special_tokens = True)
 
 # Create a class to do batch inference.
-@ray.remote(num_cpus=1, num_gpus=1)
+@ray.remote(num_cpus=0 if __DEBUG__ else 1, num_gpus=1)
 class LLMPredictor:
     def __init__(self, model, tokenizer, id, **kwargs):
         # Create an LLM.
