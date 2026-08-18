@@ -37,3 +37,8 @@ package = false
 
 [tool.uv.sources]
 levanter = { path = "levanter", editable = true }
+
+[dependency-groups]
+dev = [
+    "debugpy>=1.8.21",
+]
