@@ -15,8 +15,9 @@ from func_timeout import FunctionTimedOut, func_set_timeout
 
 __DEBUG__ = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 HOME_DIR = os.path.expanduser('~')
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
 DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
-DEFAULT_LEAN_WORKSPACE = f'{HOME_DIR}/lean/mathlib4/'
+DEFAULT_LEAN_WORKSPACE = os.path.join(PROJECT_DIR, 'lean/mathlib4')
 DEFAULT_TIMEOUT = 200
 LEAN_HEADER = 'import miniF2F\nimport Aesop\nset_option maxHeartbeats 0\nopen BigOperators Real Nat Topology Rat\n'
 TEST_BATCH_SIZE = 40

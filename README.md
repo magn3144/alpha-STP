@@ -12,14 +12,14 @@ Create the local macOS environment from the repository root:
 uv sync --locked
 ```
 
-On DTU, load the selected Python and CUDA modules and create a separate Linux environment from the same lockfile:
+On DTU, load Python and create a separate Linux environment from the same lockfile:
 
 ```sh
-module load python3/3.10.18 cuda/12.1.1
+module load python3/3.10.18
 uv sync --locked --python "$(command -v python3)"
 ```
 
-The lockfile selects CPU JAX on macOS and CUDA JAX plus vLLM on Linux. Do not copy `.venv` between the two systems; run `uv sync --locked` in each clone.
+The lockfile selects CPU JAX on macOS and CUDA JAX plus vLLM on Linux. The Linux wheels include their CUDA libraries, so loading a different CUDA module can cause library conflicts. Do not copy `.venv` between the two systems; run `uv sync --locked` in each clone.
 
 All included job scripts request one A100 from the `gpua100` queue. See [`jobs/README.md`](jobs/README.md) for configuration and submission instructions. In short:
 
@@ -30,6 +30,31 @@ bsub < jobs/rl_steps.sh
 ```
 
 The generation jobs use the allocated GPU for vLLM or embeddings and the allocated CPU slots for Lean verification. Training starts after generation and uses the same GPU through JAX/Levanter. The inference model must fit on one GPU, and single-GPU full-model training requires enough memory on the A100 assigned by LSF.
+
+## Debugging the STP loop
+
+Download the small debug model once:
+
+```sh
+source .venv/bin/activate
+huggingface-cli download amd/AMD-Llama-135m \
+    --local-dir storage/models/AMD-Llama-135m
+```
+
+Connect VS Code to `hpclogin1`, open a terminal, and enter an interactive A100 shell:
+
+```sh
+a100sh
+nvidia-smi
+```
+
+Choose a GPU with no listed processes and almost no allocated memory, then start the debug launcher with that GPU index:
+
+```sh
+DEBUG_GPU=1 jobs/debug_rl.sh
+```
+
+Enter your DTU password when prompted. When the launcher says it is waiting for VS Code, open **Run and Debug**, select **Attach: STP tiny-model GPU debug**, and press F5. The profile enables subprocess debugging and runs one round with one statement and one sample. Each run writes to a new directory under `storage/STP_debug_amd135m/`. Press Ctrl+C in the terminal after stopping the debugger.
 
 ## Weights & Biases
 

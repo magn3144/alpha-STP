@@ -1,3 +1,4 @@
+/lean/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -176,3 +177,5 @@ jobs/logs/*.out
 jobs/logs/*.err
 
 storage/
+*.err
+*.out
