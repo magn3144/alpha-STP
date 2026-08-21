@@ -4,6 +4,7 @@ import random
 
 from datasets import load_dataset
 
+from utils.experiment_utils import REPO_DIR
 from utils.file_utils import write_data
 
 
@@ -32,9 +33,11 @@ def take_unique(rows, size, excluded_keys):
 
 
 if __name__ == '__main__':
-    storage = os.environ['STORAGE']
-    sft_train_dataset = load_dataset(DATASET_NAME, split="train")
-    sft_eval_dataset = load_dataset(DATASET_NAME, split="eval")
+    storage = str(REPO_DIR / 'storage')
+    huggingface_cache = os.path.join(storage, 'huggingface_cache')
+    print(f'Saving downloaded and prepared datasets under {storage}')
+    sft_train_dataset = load_dataset(DATASET_NAME, split="train", cache_dir=huggingface_cache)
+    sft_eval_dataset = load_dataset(DATASET_NAME, split="eval", cache_dir=huggingface_cache)
     full_train_dataset = [example for example in sft_train_dataset]
     full_eval_dataset = [example for example in sft_eval_dataset]
 
