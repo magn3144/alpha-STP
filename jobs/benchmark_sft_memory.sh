@@ -23,8 +23,8 @@ export XLA_PYTHON_CLIENT_PREALLOCATE=false
 export JAX_TRACEBACK_FILTERING=off
 
 model="${BENCHMARK_MODEL:-$BASE_MODEL}"
-train_data="$STORAGE/data/SFT/mathlib_leanworkbook.json"
-train_cache="$STORAGE/data/SFT/mathlib_leanworkbook_cache"
+train_data="$STORAGE/data/SFT/train.json"
+train_cache="$STORAGE/data/SFT/train_cache"
 result_dir="$STORAGE/SFT_memory_benchmark/$LSB_JOBID"
 max_per_device_batch="${MAX_PER_DEVICE_BATCH:-64}"
 monitor_pid=
