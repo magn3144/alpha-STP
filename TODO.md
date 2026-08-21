@@ -2,6 +2,18 @@
 - [X] Convert .sh experiment scripts to .py scripts
 - [X] Modify code so it runs on GPU
 - [X] Debug code in interactive GPU mode
-- [ ] Test which batch size i can use for SFT run with 2 x A100 80GB
+- [ ] Test which batch size works for SFT run with 2 x A100 80GB
 - [ ] Do small SFT training run and save intermediate models
+- [ ] Implement timers for STP run for benchmarking
 - [ ] Do small STP training run and save intermediate models
+- [ ] Plot cumulative pass rate vs #generated proofs
+- [ ] Test AlphaProof parallel searches
+- [ ] Combine AlphaProof with STP to use AlphaProof as solver
+- [ ] Implement timers for STP AlphaProof run for benchmarking
+- [ ] Train separate conjecturer model with SFT
+- [ ] Do small STP training run with AlphaProof and save intermediate models
+- [ ] Plot cumulative pass rate vs #generated proofs for AlphaProof STP run
+- [ ] Implement single search difficulty measure
+- [ ] Do small STP training run with single search difficulty measure
+- [ ] Test how long single search sifficulty measure (running in parallel) takes vs parallel multi search difficulty measure
+- [ ] Plot cumulative pass rate vs #generated proofs for single search difficulty measure STP run (and time this run)

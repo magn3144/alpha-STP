@@ -16,13 +16,14 @@ trainer:
   # Two GPUs x 8 examples/device x 8 accumulation steps = 128 examples/update.
   train_batch_size: 128
   num_train_steps: 157
-  steps_per_eval: 25
+  steps_per_eval: 40
 
   tensor_parallel_axes: ["mlp", "heads"]
   per_device_eval_parallelism: 8
   per_device_parallelism: 8
 # Export at steps 40, 80, 120, and the final step 156.
 save_freq: 40
+eval_on_first_step: False
 
 optimizer:
   learning_rate: 3e-5

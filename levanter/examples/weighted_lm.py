@@ -92,6 +92,7 @@ class TrainArgs:
 
     hf_save_path: Optional[str] = "alpaca_hf_ckpts"  # Path to save the HuggingFace checkpoint, can be gcs
     save_freq: Optional[int] = None
+    eval_on_first_step: bool = True
 
 # Encoder/Decoder dataset for Alpaca.
 # We basically do string interpolation of the (instruction, input, output) triples with the prompt,
@@ -230,7 +231,13 @@ def train(config: TrainArgs):
             cb = levanter.eval.cb_tagged_lm_evaluate(
                 trainer.EvalBatch, [(eval_dataset, ['val'])], trainer.device_mesh, compute_axis_mapping, None
             )
-            trainer.add_hook(cb, every=config.trainer.steps_per_eval)
+
+            def evaluate_model(info):
+                if info.step == 0 and not config.eval_on_first_step:
+                    return None
+                return cb(info)
+
+            trainer.add_hook(evaluate_model, every=config.trainer.steps_per_eval)
             logger.info("Done loading eval data.")
 
         vocab_size = len(tokenizer)
