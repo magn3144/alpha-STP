@@ -1,4 +1,7 @@
 - [X] Update WANDB setup
 - [X] Convert .sh experiment scripts to .py scripts
 - [X] Modify code so it runs on GPU
-- [ ] Debug code in interactive GPU mode
+- [X] Debug code in interactive GPU mode
+- [ ] Test which batch size i can use for SFT run with 2 x A100 80GB
+- [ ] Do small SFT training run and save intermediate models
+- [ ] Do small STP training run and save intermediate models

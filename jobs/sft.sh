@@ -4,7 +4,8 @@
 #BSUB -W 24:00
 #BSUB -n 8
 #BSUB -R "span[hosts=1]"
-#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -R "select[gpu80gb]"
+#BSUB -gpu "num=2:mode=exclusive_process"
 #BSUB -R "rusage[mem=16GB]"
 #BSUB -M 16GB
 #BSUB -oo jobs/logs/sft_%J.out
