@@ -67,7 +67,7 @@ def cleanup_dir(directory):
 
 
 def copy_dir(source, target):
-    shutil.copytree(source, target)
+    shutil.copytree(source, target, dirs_exist_ok=True)
     logging.debug(f'Copied {source} to {target}')
 
 

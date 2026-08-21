@@ -6,7 +6,7 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=2:mode=exclusive_process"
 #BSUB -R "rusage[mem=10GB]"
-#BSUB -M 10GB
+#BSUB -M 64GB
 #BSUB -oo jobs/logs/test_stp_loop_%J.out
 #BSUB -eo jobs/logs/test_stp_loop_%J.err
 

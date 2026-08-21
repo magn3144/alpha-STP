@@ -24,13 +24,15 @@ fixture_dir="$debug_storage/fixture"
 run_id=$(date +%Y%m%d_%H%M%S)
 run_dir="$debug_storage/runs/$run_id"
 round_dir="$run_dir/round0"
+run_storage="$run_dir/storage"
 login_host=hpclogin1
 control_socket="$run_dir/debug-tunnel.sock"
 
-mkdir -p "$round_dir"
+mkdir -p "$round_dir" "$run_storage/data/SFT"
 cp "$fixture_dir/generated_proofs.json" "$round_dir/generated_proofs.json"
 cp "$fixture_dir/conjecture_examples.json" "$round_dir/conjecture_examples.json"
-export STORAGE="$debug_storage"
+cp "$debug_storage/data/SFT/eval.json" "$run_storage/data/SFT/eval.json"
+export STORAGE="$run_storage"
 
 echo "Enter your DTU password to create the debug tunnel to $login_host."
 ssh -M -S "$control_socket" -fN \

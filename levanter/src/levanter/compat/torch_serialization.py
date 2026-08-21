@@ -463,7 +463,7 @@ def save_state_dict(state_dict: StateDict, path):
     """
     # now that we've moved the model to the CPU, we don't need to do this on all processes
     state_dict = {k: np.array(v) for k, v in state_dict.items() if v is not None}
-    state_dict = {k: torch.tensor(v, dtype=torch.bfloat16) for k, v in state_dict.items() if v is not None}
+    state_dict = {k: torch.tensor(v.astype(np.float32), dtype=torch.bfloat16) for k, v in state_dict.items() if v is not None}
     if jax.process_index() == 0:
         safetensors.torch.save_file(state_dict, path, metadata={"format": "pt"})
     global _GLOBAL_SAVE_COUNT
