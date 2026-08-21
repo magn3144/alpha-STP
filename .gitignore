@@ -179,3 +179,4 @@ jobs/logs/*.err
 storage/
 *.err
 *.out
+wandb/

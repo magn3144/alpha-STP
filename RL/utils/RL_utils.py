@@ -675,7 +675,7 @@ def train_model(
             'trainer.wandb.id': wandb_id,
 
             'trainer.num_train_steps': max_iters,
-            'trainer.train_batch_size': BATCH_SIZE,
+            'trainer.train_batch_size': args.batch_size,
             'trainer.checkpointer.base_path': os.path.join(output_dir, 'checkpoints'),
             'train_data': train_data_path,
             'train_data_cache_dir': os.path.join(data_cache_dir, 'train'),

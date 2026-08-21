@@ -134,6 +134,7 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=1.6e-4)
     parser.add_argument("--seed", type=int, default=2333)
     parser.add_argument("--epoch", type=int, default=2)
+    parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     parser.add_argument("--exp_dir", type=str, default=None)
     parser.add_argument("--base_model", type=str, default=None)
     parser.add_argument("--dataset_config", type=str, default=None)
@@ -221,7 +222,7 @@ if __name__ == "__main__":
     
     start_time = datetime.now()
     # train the actor
-    max_iters = max(len(train_ds) * args.epoch // BATCH_SIZE, 10)
+    max_iters = max(len(train_ds) * args.epoch // args.batch_size, 10)
     train_model(os.path.join(args.save_dir, 'RL_model'), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'), 
                     args, wandb_entity, wandb_project, wandb_id)
     duration = datetime.now() - start_time
