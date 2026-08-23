@@ -94,13 +94,13 @@ run_trial() {
         --model_name_or_path "$model" \
         --tokenizer_name_or_path "$model" \
         --trainer.num_train_steps 1 \
+        --optimizer.warmup 0 \
         --trainer.train_batch_size "$global_microbatch" \
         --trainer.per_device_parallelism "$per_device_batch" \
         --trainer.per_device_eval_parallelism "$per_device_batch" \
         --trainer.mp p=bfloat16,c=bfloat16 \
         --trainer.load_checkpoint false \
         --trainer.checkpointer.base_path "$trial_dir/checkpoints" \
-        --trainer.tracker.type noop \
         --hf_save_path null \
         --eval_data null \
         --train_data "$train_data" \

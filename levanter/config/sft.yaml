@@ -11,7 +11,7 @@ trainer:
     name: "deepseek-sft"
     tags: ["deepseek-ai/DeepSeek-Prover-V1.5-SFT", "STP"]
 
-  mp: p=f32,c=bfloat16
+  mp: p=bfloat16,c=bfloat16
 
   # Two GPUs x 8 examples/device x 8 accumulation steps = 128 examples/update.
   train_batch_size: 128
