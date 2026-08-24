@@ -31,7 +31,7 @@ def extract_invokes(ast_results):
         invokes.add(premise['fullName'])
     return list(invokes)
 
-def get_result_from_repl(repl_result, code, start_time):
+def get_result_from_repl(repl_result, code, duration, phase):
     result = {
         "sorries" : repl_result.get('sorries', []), 
         "tactics" : repl_result.get('tactics', []),
@@ -47,7 +47,13 @@ def get_result_from_repl(repl_result, code, start_time):
         result['invokes'] = extract_invokes(ast_results)
         if __DEBUG__:
             result['ast'] = ast_results
-    result['verify_time'] = time.time() - start_time
+    result['verify_time'] = duration
+    result['_verification_calls'] = [{
+        'duration_seconds': duration,
+        'phase': phase,
+        'status': 'success',
+        'complete': result['complete'],
+    }]
     return result
 
 def read_from_repl(proc):
@@ -139,15 +145,28 @@ def verify_lean4_file(codes, headers, lake_path=DEFAULT_LAKE_PATH, lean_workspac
             
             message_str = json.dumps(command | {'cmd': code, 'env': 0}, ensure_ascii=False) + '\r\n\r\n'
             try:
-                start_time = time.time()
+                start_time = time.perf_counter()
                 output = query_repl(proc, message_str)
                 repl_result = json.loads(output)
-                result = get_result_from_repl(repl_result, code, start_time)
+                duration = time.perf_counter() - start_time
+                result = get_result_from_repl(repl_result, code, duration, 'proof')
                 results.append(result)
             except (Exception, FunctionTimedOut) as e:
+                duration = time.perf_counter() - start_time
                 if __DEBUG__:
                     print(e)
-                results.append({"system_messages": str(e), 'complete': False})
+                status = 'timeout' if isinstance(e, FunctionTimedOut) else 'error'
+                results.append({
+                    "system_messages": str(e),
+                    'complete': False,
+                    'verify_time': duration,
+                    '_verification_calls': [{
+                        'duration_seconds': duration,
+                        'phase': 'proof',
+                        'status': status,
+                        'complete': False,
+                    }],
+                })
                 terminate_repl(proc)
                 proc = None
 
@@ -169,7 +188,7 @@ def verify_lean4_file_premises(code, header, lake_path=DEFAULT_LAKE_PATH, lean_w
     message_str = json.dumps(command | {'cmd': (header or LEAN_HEADER) + code}, ensure_ascii=False) + '\r\n\r\n'
     if verbose:
         print(message_str)
-    start_time = time.time()
+    start_time = time.perf_counter()
     
     results = []
     try:
@@ -184,13 +203,26 @@ def verify_lean4_file_premises(code, header, lake_path=DEFAULT_LAKE_PATH, lean_w
                                      timeout=timeout,)
 
         repl_result = json.loads(outputs.stdout)
-        result = get_result_from_repl(repl_result, code, start_time)
+        duration = time.perf_counter() - start_time
+        result = get_result_from_repl(repl_result, code, duration, 'premises')
         results.append(result)
         return results
     except Exception as e:
+        duration = time.perf_counter() - start_time
         if __DEBUG__:
             print(e)
-        return [{"system_messages": str(e), 'complete': False}]
+        status = 'timeout' if isinstance(e, subprocess.TimeoutExpired) else 'error'
+        return [{
+            "system_messages": str(e),
+            'complete': False,
+            'verify_time': duration,
+            '_verification_calls': [{
+                'duration_seconds': duration,
+                'phase': 'premises',
+                'status': status,
+                'complete': False,
+            }],
+        }]
 
 @ray.remote(num_cpus=1)
 class Lean4Worker():
@@ -227,7 +259,11 @@ class Lean4Worker():
                                     ast=True,
                                     timeout=DEFAULT_TIMEOUT)
                         result = verify_lean4_file_premises(**task)
-                        results[i] = result[0]
+                        premise_result = result[0]
+                        calls = results[i]['_verification_calls'] + premise_result['_verification_calls']
+                        premise_result['_verification_calls'] = calls
+                        premise_result['verify_time'] = sum(call['duration_seconds'] for call in calls)
+                        results[i] = premise_result
         else:
             assert len(inputs) == 1, "Single input only for premises mode"
             test_info = inputs[0]

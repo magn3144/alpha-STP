@@ -8,7 +8,6 @@ import logging
 import shlex
 import subprocess
 import sys
-from datetime import datetime
 import numpy as np
 from copy import deepcopy
 from tqdm.auto import tqdm
@@ -28,6 +27,7 @@ from typing import Any, Dict, List, Tuple, Set, Callable, Optional
 from utils.file_utils import cleanup_dir, copy_dir, move_file, read_file, write_data
 from utils.model_utils import END_THM, START_LEMMA_STMT
 from utils.prover.lean.verifier import create_ray_lean4_actors, TEST_BATCH_SIZE
+from utils.timing_utils import record_event, timer
 from concurrent.futures import ProcessPoolExecutor
 
 BATCH_SIZE = 2048
@@ -154,11 +154,12 @@ def generate_and_test(
         cpus_per_task_stage2 = 1
     else:
         reserved_cpus = 4 + len(ray_inference_actors)
-    ray_test_actors = create_ray_lean4_actors(
-        reserved_cpus=reserved_cpus,
-        cpus_per_task=cpus_per_task,
-        collect_premises=collect_premises,
-    )
+    with timer('verification_actor_startup', stage=1):
+        ray_test_actors = create_ray_lean4_actors(
+            reserved_cpus=reserved_cpus,
+            cpus_per_task=cpus_per_task,
+            collect_premises=collect_premises,
+        )
     tester_pool = ActorPool(ray_test_actors)
 
     save_file_generation = os.path.join(save_dir, f'generated_proofs.json') if save_dir is not None else None
@@ -171,6 +172,7 @@ def generate_and_test(
     pool_lock = threading.Lock()
     pbar = tqdm(total=len(selected_lemmas))
     finished_generation = False
+    verification_start = None
     
     def aggregate_results(early_stop_threshold = 0):
         save_interval = 900  # Time interval in seconds (300 seconds = 5 minutes)
@@ -201,6 +203,15 @@ def generate_and_test(
                 continue
             
             for result in results:
+                for call in result.get('_verification_calls', []):
+                    record_event(
+                        'solver_verification_call',
+                        call['duration_seconds'],
+                        call['status'],
+                        phase=call['phase'],
+                        lemma_id=result.get('lemma_id'),
+                        complete=call['complete'],
+                    )
                 test_results[get_deduplication_key(result)] = get_result_items(result)
 
             nr_tests_done += len(results)
@@ -222,14 +233,15 @@ def generate_and_test(
         monitoring_thread.daemon = True
         monitoring_thread.start()
 
-        start_time = datetime.now()
+        start_time = time.perf_counter()
         generated_proofs_dedup = []
         deduplicate_index = {}
         batch_size = (len(selected_lemmas) + NR_FOLD - 1) // NR_FOLD
         for shard in range(NR_FOLD):
             logging.debug(f'Processing shard {shard}/{NR_FOLD}...')
             batch = selected_lemmas[batch_size * shard: batch_size * (shard + 1)]
-            generated_proofs = collect_traj(inference_pool, len(ray_inference_actors), batch, lemma_mapping, seed * NR_FOLD + shard)
+            with timer('network_inference', shard=shard):
+                generated_proofs = collect_traj(inference_pool, len(ray_inference_actors), batch, lemma_mapping, seed * NR_FOLD + shard)
 
             start_idx = len(generated_proofs_dedup)
             # deduplicate proofs before testing
@@ -247,6 +259,8 @@ def generate_and_test(
             new_testing_tasks = split_test_blocks(new_testing_tasks, test_batch_size, group_by_header)
             with pool_lock:
                 for testing_block in new_testing_tasks:
+                    if verification_start is None:
+                        verification_start = time.perf_counter()
                     tester_pool.submit(lambda actor, batch: 
                                 actor.run.remote(batch, batched=True),
                         testing_block)
@@ -254,11 +268,11 @@ def generate_and_test(
 
         finished_generation = True
         logging.info(f'Finished generation. #generated lemmas = {len(generated_proofs_dedup)}.')
-        duration = datetime.now() - start_time
-        logging.info('Inference time: ' + str(duration))
+        duration = time.perf_counter() - start_time
+        logging.info(f'Inference time: {duration:.3f} seconds')
 
         logging.info(f'Start testing {total_test_tasks} tasks...')
-        start_time = datetime.now()
+        start_time = time.perf_counter()
         monitoring_thread.join()
         pbar.close()
 
@@ -267,10 +281,11 @@ def generate_and_test(
         for actor in ray_test_actors:
             ray.kill(actor)
         # allow more memory for stage 2 because the failed jobs are likely to be more memory-consuming
-        ray_test_actors = create_ray_lean4_actors(
-            reserved_cpus=reserved_cpus,
-            cpus_per_task=cpus_per_task_stage2,
-        )
+        with timer('verification_actor_startup', stage=2):
+            ray_test_actors = create_ray_lean4_actors(
+                reserved_cpus=reserved_cpus,
+                cpus_per_task=cpus_per_task_stage2,
+            )
         tester_pool = ActorPool(ray_test_actors)
 
         new_testing_tasks = []
@@ -293,8 +308,10 @@ def generate_and_test(
         monitoring_thread.join()
         pbar.close()
 
-        duration = datetime.now() - start_time
-        logging.info('Testing time: ' + str(duration))
+        duration = time.perf_counter() - start_time
+        logging.info(f'Testing time: {duration:.3f} seconds')
+        if verification_start is not None:
+            record_event('verification_wall', time.perf_counter() - verification_start)
         
         for actor in ray_test_actors:
             ray.kill(actor)
@@ -659,6 +676,7 @@ def train_model(
         wandb_entity: str,
         wandb_project: str, 
         wandb_id: str, 
+        training_event,
         eval_data_path: Optional[str] = None, 
 ) -> None:
     model_name = model_dir.split('/')[-1]
@@ -710,7 +728,8 @@ def train_model(
         python_paths.append(env['PYTHONPATH'])
     env['PYTHONPATH'] = os.pathsep.join(python_paths)
     logging.debug(shlex.join(training_cmd))
-    subprocess.run(training_cmd, cwd=REPO_DIR, env=env, check=True)
+    with timer(training_event):
+        subprocess.run(training_cmd, cwd=REPO_DIR, env=env, check=True)
 
     # move the trained model
     trained_model_path = os.path.join(output_dir, 'hf_checkpoints', wandb_id, f'step-{max_iters - 1}')

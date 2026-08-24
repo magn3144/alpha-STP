@@ -14,6 +14,7 @@ from utils.file_utils import path_exists, read_file, write_data
 from utils.model_utils import init_ray_cluster
 from utils.RL_utils import collect_trajectories, collect_conjecture, load_ds_from_config
 from utils.RL_utils import Sampler_base, Sampler_naive, __DEBUG__, REPO_DIR
+from utils.timing_utils import configure_timing, timer
 
 MAX_LENGTH = 1024
 
@@ -39,8 +40,11 @@ if __name__ == "__main__":
         exit(0)
 
     os.makedirs(args.exp_dir, exist_ok=True)
+    round = int(args.exp_dir.rsplit('/', 1)[-1][len('round'):])
+    configure_timing(args.exp_dir, round_id=round)
 
-    formatted_ds = load_ds_from_config(args.dataset_config)
+    with timer('generation_dataset_loading'):
+        formatted_ds = load_ds_from_config(args.dataset_config)
     if __DEBUG__:
         formatted_ds = formatted_ds[:1000]
 
@@ -52,7 +56,6 @@ if __name__ == "__main__":
         selected_statements = formatted_ds
     logging.info(f'Selected {len(selected_statements)} statements for this round.')
 
-    round = int(args.exp_dir.rsplit('/', 1)[-1][len('round'):])
     if round == 0:
         sampler_dict = None
     else:
@@ -77,13 +80,14 @@ if __name__ == "__main__":
         collect_trajectories(inference_pool, nr_actors, selected_lemmas, \
                                            MAX_LENGTH, seed, args.temperature, cache_dir=os.path.join(args.exp_dir, 'sampler_ckpt'))
     
-    generated_proofs, valid_conjecture_examples = sampler.generate(args.model, args.model,
-            lemmas_to_generate, args.seed, collect_traj,
-            save_dir=os.path.join(args.exp_dir, 'sampler_ckpt'),
-            collect_conjecture=collect_conjecture_fn, conjecture_multiplier=args.conjecture_multiplier,
-            round_id=round, 
-            sps=args.samples_per_statement,
-            project_to=formatted_ds)
+    with timer('generation_and_verification'):
+        generated_proofs, valid_conjecture_examples = sampler.generate(args.model, args.model,
+                lemmas_to_generate, args.seed, collect_traj,
+                save_dir=os.path.join(args.exp_dir, 'sampler_ckpt'),
+                collect_conjecture=collect_conjecture_fn, conjecture_multiplier=args.conjecture_multiplier,
+                round_id=round,
+                sps=args.samples_per_statement,
+                project_to=formatted_ds)
 
     # log the distribution of succ rates for the generated lemmas
     proof_results = defaultdict(list)

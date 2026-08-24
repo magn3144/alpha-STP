@@ -12,7 +12,6 @@ import wandb
 import numpy as np
 from collections import defaultdict
 from tqdm.auto import tqdm
-from datetime import datetime
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
 from multiprocessing import Pool
@@ -22,6 +21,7 @@ from utils.model_utils import init_ray_cluster
 from utils.model_utils import START_THM, PROVER_PROMPT
 from utils.file_utils import path_exists, read_file, write_data
 from utils.RL_utils import train_model, BATCH_SIZE, load_ds_from_config
+from utils.timing_utils import configure_timing, EventTimer, timer
 
 def compute_weight(proof):
     return np.exp(-0.001 * len(proof))
@@ -148,13 +148,16 @@ if __name__ == "__main__":
         args.save_dir = args.exp_dir
     print(args)
     rng = np.random.default_rng(args.seed)
+    configure_timing(args.exp_dir)
 
     if path_exists(os.path.join(args.exp_dir, 'RL_model')) and (args.save_dir == args.exp_dir):
         logging.warning(f"Model already trained. Exiting...")
         exit(0)
 
+    preparation_timer = EventTimer('final_training_preparation')
     init_ray_cluster()
-    train_ds = read_file(args.sft_dataset)
+    with timer('final_dataset_loading'):
+        train_ds = read_file(args.sft_dataset)
     if train_ds is None:
         logging.warning(f"Dataset {args.sft_dataset} contains no data...")
         train_ds = []
@@ -167,7 +170,8 @@ if __name__ == "__main__":
         for i in range(int(nr_rounds)):
             tasks.append((exp, i, args))
 
-    generated_proofs = execute_process_rounds(os.path.abspath(args.dataset_config), tasks)
+    with timer('final_data_merge'):
+        generated_proofs = execute_process_rounds(os.path.abspath(args.dataset_config), tasks)
     logging.info(f'Number of correct proofs: {len(generated_proofs)}')
     
     rng.shuffle(generated_proofs)
@@ -191,6 +195,7 @@ if __name__ == "__main__":
     new_ds = format_and_deduplicate_dataset(train_examples, train_ds)
     if len(new_ds) == 0:
         logging.error(f'[Erorr] No new data generated. Exiting...')
+        preparation_timer.stop('failed', reason='no_new_data')
         exit(0)
     logging.info(f'Number of new data: {len(new_ds)}')
     train_ds += new_ds
@@ -219,11 +224,9 @@ if __name__ == "__main__":
     # save trajectories
     rng.shuffle(train_ds)
     write_data(json.dumps(train_ds), os.path.join(args.save_dir, 'train_ds.json'), 'json', no_compression=True)
-    
-    start_time = datetime.now()
+    preparation_timer.stop()
+
     # train the actor
     max_iters = max(len(train_ds) * args.epoch // args.batch_size, 10)
     train_model(os.path.join(args.save_dir, 'RL_model'), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'), 
-                    args, wandb_entity, wandb_project, wandb_id)
-    duration = datetime.now() - start_time
-    logging.info('Training time: ' + str(duration))
+                    args, wandb_entity, wandb_project, wandb_id, 'final_network_training')

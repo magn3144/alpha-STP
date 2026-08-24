@@ -1,22 +1,25 @@
 import argparse
 
 from utils.experiment_utils import RL_DIR, run_python
+from utils.timing_utils import configure_timing, timer
 
 
 def main(args):
-    run_python(
-        RL_DIR / 'RL_step3_final_model.py',
-        '--base_model', args.train_from,
-        '--exp_dir', args.exp_dir,
-        '--sft_dataset', args.sft_dataset,
-        '--dataset_config', args.dataset_config,
-        '--epoch', args.epochs,
-        '--lr', args.learning_rate,
-        '--include_synthetic_examples',
-        '--merge_from', args.merge_from,
-        '--merge_from_rounds', args.merge_from_rounds,
-        dry_run=args.dry_run,
-    )
+    configure_timing(args.exp_dir, new_session=True)
+    with timer('final_training_run'):
+        run_python(
+            RL_DIR / 'RL_step3_final_model.py',
+            '--base_model', args.train_from,
+            '--exp_dir', args.exp_dir,
+            '--sft_dataset', args.sft_dataset,
+            '--dataset_config', args.dataset_config,
+            '--epoch', args.epochs,
+            '--lr', args.learning_rate,
+            '--include_synthetic_examples',
+            '--merge_from', args.merge_from,
+            '--merge_from_rounds', args.merge_from_rounds,
+            dry_run=args.dry_run,
+        )
 
 
 if __name__ == '__main__':

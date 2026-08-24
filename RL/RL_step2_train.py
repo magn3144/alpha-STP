@@ -11,13 +11,13 @@ import wandb
 import numpy as np
 from collections import defaultdict
 from tqdm.auto import tqdm
-from datetime import datetime
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import START_THM, START_LEMMA_STMT, END_THM, INVOKED_LEMMA, PROVER_PROMPT
 from utils.RL_utils import update_succ_lemmas, REPO_DIR, train_model, BATCH_SIZE
 from utils.file_utils import path_exists, read_file, write_data
+from utils.timing_utils import configure_timing, EventTimer
 
 def compute_weight(proof, verify_time = 0):
     return np.exp(-0.001 * len(proof) - 0.01 * verify_time)
@@ -109,11 +109,13 @@ if __name__ == "__main__":
     print(args)
     rng = np.random.default_rng(args.seed)
     round = int(args.exp_dir.rsplit('/', 1)[-1][len('round'):])
+    configure_timing(args.exp_dir, round_id=round)
 
     if path_exists(os.path.join(args.exp_dir, 'RL_model')) and (args.save_dir == args.exp_dir):
         logging.warning(f"Model already trained. Exiting...")
         exit(0)
 
+    preparation_timer = EventTimer('round_training_preparation')
     train_ds = read_file(args.sft_dataset)
     if train_ds is None:
         logging.warning(f"Dataset {args.sft_dataset} contains no data...")
@@ -145,6 +147,7 @@ if __name__ == "__main__":
     new_ds = format_and_deduplicate_dataset(valid_proofs, train_ds, generated_proofs)
     if len(new_ds) == 0:
         logging.error(f'[Erorr] No new data generated. Exiting...')
+        preparation_timer.stop('failed', reason='no_new_data')
         exit(1)
     logging.info(f'Number of new data: {len(new_ds)}')
     train_ds += new_ds
@@ -187,11 +190,9 @@ if __name__ == "__main__":
     # save trajectories
     rng.shuffle(train_ds)
     write_data(json.dumps(train_ds), os.path.join(args.save_dir, 'train_ds.json'), 'json', no_compression=True)
-    
-    start_time = datetime.now()
+    preparation_timer.stop()
+
     # train the actor
     max_iters = max(len(train_ds) * args.epoch // args.batch_size, 5)
     train_model(os.path.join(args.save_dir, 'RL_model'), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'), 
-                    args, wandb_entity, wandb_project, wandb_id)
-    duration = datetime.now() - start_time
-    logging.info('Training time: ' + str(duration))
+                    args, wandb_entity, wandb_project, wandb_id, 'round_network_training')

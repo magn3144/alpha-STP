@@ -2,9 +2,10 @@
 - [X] Convert .sh experiment scripts to .py scripts
 - [X] Modify code so it runs on GPU
 - [X] Debug code in interactive GPU mode
-- [ ] Test which batch size works for SFT run with 2 x A100 80GB
+- [X] Test which batch size works for SFT run with 2 x A100 80GB
 - [ ] Do small SFT training run and save intermediate models
-- [ ] Implement timers for STP run for benchmarking
+- [X] Implement timers for STP run for benchmarking
+- [ ] Benchmark batch size vs memory for STP generation phase
 - [ ] Do small STP training run and save intermediate models
 - [ ] Plot cumulative pass rate vs #generated proofs
 - [ ] Test AlphaProof parallel searches
