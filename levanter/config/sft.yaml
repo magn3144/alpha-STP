@@ -7,21 +7,22 @@ trust_remote_code: True
 trainer:
   tracker:
     type: wandb
+    entity: magn3144
     project: "STP_deepseek"
     name: "deepseek-sft"
     tags: ["deepseek-ai/DeepSeek-Prover-V1.5-SFT", "STP"]
 
   mp: p=bfloat16,c=bfloat16
 
-  # Two GPUs x 8 examples/device x 8 accumulation steps = 128 examples/update.
-  train_batch_size: 128
-  num_train_steps: 157
+  # Two GPUs x 14 examples/device x 5 accumulation steps = 140 examples/update.
+  train_batch_size: 140
+  num_train_steps: 144
   steps_per_eval: 40
 
   tensor_parallel_axes: ["mlp", "heads"]
-  per_device_eval_parallelism: 8
-  per_device_parallelism: 8
-# Export at steps 40, 80, 120, and the final step 156.
+  per_device_eval_parallelism: 14
+  per_device_parallelism: 14
+# Export at steps 40, 80, 120, and the final step 143.
 save_freq: 40
 eval_on_first_step: False
 
