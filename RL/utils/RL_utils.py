@@ -508,7 +508,7 @@ class Sampler_base:
 
         dedup_set = set()
         for test_info in generated_proofs:
-            if ('shared_lemma' in test_info) and (get_succ_rate(test_info) < CONJECTURE_THRESHOLD):
+            if ('shared_lemma' in test_info) and (get_succ_rate(test_info) <= CONJECTURE_THRESHOLD):
                 if test_info['shared_lemma'] in test_info.get('invokes', []):
                     if test_info['statement'] not in dedup_set:
                         conjecture_examples.append(test_info)
@@ -517,7 +517,7 @@ class Sampler_base:
         invoke_count = len(conjecture_examples)
         no_invoke_count = 0
         for test_info in generated_proofs:
-            if ('shared_lemma' in test_info) and (get_succ_rate(test_info) < CONJECTURE_THRESHOLD):
+            if ('shared_lemma' in test_info) and (get_succ_rate(test_info) <= CONJECTURE_THRESHOLD):
                 if (test_info['statement'] not in dedup_set) and (no_invoke_count < max(invoke_count * 20, 4096)): 
                     # we don't want to generate too many examples without invoking any lemma
                     no_invoke_count += 1

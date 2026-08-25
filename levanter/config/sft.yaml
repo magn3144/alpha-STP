@@ -1,7 +1,7 @@
 max_tune_length: 2048
 
-model_name_or_path: "deepseek-ai/DeepSeek-Prover-V1.5-SFT"
-tokenizer_name_or_path: "deepseek-ai/DeepSeek-Prover-V1.5-SFT"
+model_name_or_path: "deepseek-ai/deepseek-coder-1.3b-base"
+tokenizer_name_or_path: "deepseek-ai/deepseek-coder-1.3b-base"
 trust_remote_code: True
 
 trainer:
@@ -10,9 +10,9 @@ trainer:
     entity: magn3144
     project: "STP_deepseek"
     name: "deepseek-sft"
-    tags: ["deepseek-ai/DeepSeek-Prover-V1.5-SFT", "STP"]
+    tags: ["deepseek-ai/deepseek-coder-1.3b-base", "STP"]
 
-  mp: p=bfloat16,c=bfloat16
+  mp: p=f32,c=bfloat16
 
   # Two GPUs x 14 examples/device x 5 accumulation steps = 140 examples/update.
   train_batch_size: 140

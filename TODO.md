@@ -5,9 +5,9 @@
 - [X] Test which batch size works for SFT run with 2 x A100 80GB
 - [ ] Do small SFT training run and save intermediate models
 - [X] Implement timers for STP run for benchmarking
-- [ ] Benchmark batch size vs memory for STP generation phase
+- [ ] WANDB should track cumulative solve rate during STP
 - [ ] Do small STP training run and save intermediate models
-- [ ] Plot cumulative pass rate vs #generated proofs
+- [ ] Plot cumulative pass rate vs #generated proofs during STP training
 - [ ] Test AlphaProof parallel searches
 - [ ] Combine AlphaProof with STP to use AlphaProof as solver
 - [ ] Implement timers for STP AlphaProof run for benchmarking

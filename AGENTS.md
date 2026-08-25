@@ -9,3 +9,9 @@
 - Dont write tests. Its not necessary for this project.
 - Dont edit the README.md, unless I explicitly ask you to.
 - When I ask a question give me a concise answer that gets straight to the point.
+
+
+# Design Choices
+
+- Adapted to run on GPUs instead of TPUs
+- In the original code the pass rate to train the conjecturer on a conjecture is 0 < pass < 0.25. I changed it to 0 < pass <= 0.25

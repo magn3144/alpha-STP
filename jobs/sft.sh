@@ -12,8 +12,6 @@
 #BSUB -eo jobs/logs/sft_%J.err
 
 source "$LS_SUBCWD/jobs/common.sh"
-: "${BASE_MODEL:?Set BASE_MODEL in jobs/config.sh}"
 
 python -u RL/run_sft.py \
-    --storage "$STORAGE" \
-    --base-model "$BASE_MODEL"
+    --storage "$STORAGE"
