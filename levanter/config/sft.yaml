@@ -14,23 +14,22 @@ trainer:
 
   mp: p=f32,c=bfloat16
 
-  # Two GPUs x 14 examples/device x 5 accumulation steps = 140 examples/update.
-  train_batch_size: 140
-  num_train_steps: 144
+  train_batch_size: 20
+  num_train_steps: 1005
   steps_per_eval: 40
 
   tensor_parallel_axes: ["mlp", "heads"]
-  per_device_eval_parallelism: 14
-  per_device_parallelism: 14
-# Export at steps 40, 80, 120, and the final step 143.
-save_freq: 40
+  per_device_eval_parallelism: 20
+  per_device_parallelism: 20
+# Export at steps 126, 252, 378, 504, 630, 756, 882, and 1004.
+save_freq: 126
 eval_on_first_step: False
 
 optimizer:
-  learning_rate: 3e-5
+  learning_rate: 1e-5
   weight_decay: 0.0
   beta1: 0.9
   beta2: 0.95
   epsilon: 1E-5
-  warmup: 10
+  warmup: 100
   min_lr_ratio: 1.0
