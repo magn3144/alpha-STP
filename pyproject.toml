@@ -20,6 +20,7 @@ dependencies = [
     "pandas==2.2.2",
     "psutil==6.0.0",
     "pyarrow==17.0.0",
+    "pyyaml==6.0.3",
     "pytz",
     "ray[default]==2.34.0",
     "scipy==1.12.0",
