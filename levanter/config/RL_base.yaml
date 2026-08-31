@@ -5,7 +5,7 @@ trust_remote_code: True
 trainer:
   tracker:
     type: wandb
-    entity: s204164
+    entity: s204164-danmarks-tekniske-universitet-dtu
     project: "alpha-STP"
     tags: ["deepseek-ai/DeepSeek-Prover-V1.5-SFT", "STP"]
 
