@@ -41,6 +41,9 @@ def main(args):
         yaml.safe_dump(config, config_file)
         config_file.flush()
 
+        cache_name = f'{Path(base_model).name}_{config["max_tune_length"]}'
+        cache_dir = storage / 'data/SFT/cache' / cache_name
+
         run_python(
             REPO_DIR / 'levanter/examples/weighted_lm.py',
             '--config_path', config_file.name,
@@ -49,9 +52,9 @@ def main(args):
             '--trainer.checkpointer.base_path', storage / 'SFT_ckpt',
             '--hf_save_path', storage / 'SFT',
             '--train_data', train_data,
-            '--train_data_cache_dir', storage / 'data/SFT/train_cache',
+            '--train_data_cache_dir', cache_dir / 'train',
             '--eval_data', validation_data,
-            '--eval_data_cache_dir', storage / 'data/SFT/validation_cache',
+            '--eval_data_cache_dir', cache_dir / 'validation',
             cwd=REPO_DIR,
             env=levanter_environment(),
             dry_run=args.dry_run,

@@ -5,6 +5,8 @@ tokenizer_name_or_path: "deepseek-ai/deepseek-coder-1.3b-base"
 trust_remote_code: True
 
 trainer:
+  ray:
+    auto_start_cluster: false
   tracker:
     type: wandb
     entity: s204164-danmarks-tekniske-universitet-dtu
