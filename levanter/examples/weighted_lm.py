@@ -93,6 +93,7 @@ class TrainArgs:
     hf_save_path: Optional[str] = "alpaca_hf_ckpts"  # Path to save the HuggingFace checkpoint, can be gcs
     save_freq: Optional[int] = None
     eval_on_first_step: bool = True
+    cache_only: bool = False
 
 # Encoder/Decoder dataset for Alpaca.
 # We basically do string interpolation of the (instruction, input, output) triples with the prompt,
@@ -168,11 +169,6 @@ def mk_dataset(data_dir: str, data_cache_dir: str, batch_size: int, tokenizer: t
     return dataset
 
 def train(config: TrainArgs):
-    levanter.initialize(config)
-
-    # Randomness in JAX is tightly controlled. We pass around a key that is used to generate random numbers.
-    training_key = jrandom.PRNGKey(config.trainer.seed)
-
     # This is largely the same as in Alpaca. Only change is we use the fast tokenizer.
     tokenizer = transformers.AutoTokenizer.from_pretrained(
         config.tokenizer_name_or_path,
@@ -182,6 +178,22 @@ def train(config: TrainArgs):
     )
     num_new_tokens = add_special_tokens(tokenizer)
     logger.info(f"Added {num_new_tokens} new tokens")
+
+    if config.cache_only:
+        logger.info("Building training data cache.")
+        train_dataset = mk_dataset(config.train_data, config.train_data_cache_dir, config.trainer.train_batch_size, tokenizer)
+        train_dataset.preproc_dataset.cache.await_finished()
+        if config.eval_data is not None:
+            logger.info("Building evaluation data cache.")
+            eval_dataset = mk_dataset(config.eval_data, config.eval_data_cache_dir, config.trainer.eval_batch_size, tokenizer)
+            eval_dataset.preproc_dataset.cache.await_finished()
+        logger.info("Finished building data caches.")
+        return
+
+    levanter.initialize(config)
+
+    # Randomness in JAX is tightly controlled. We pass around a key that is used to generate random numbers.
+    training_key = jrandom.PRNGKey(config.trainer.seed)
 
     # Since Levanter has different implementations of models from HF, we need to convert the HF checkpoint.
     # This class is a wrapper around the HF checkpoint converter that also downloads the checkpoint if necessary.

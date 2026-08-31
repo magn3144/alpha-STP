@@ -38,6 +38,8 @@ def main(args):
         config = load_config(base_config_path)
         if args.config:
             config = merge_configs(config, load_config(args.config))
+        if args.cache_only:
+            config['cache_only'] = True
         yaml.safe_dump(config, config_file)
         config_file.flush()
 
@@ -66,5 +68,6 @@ if __name__ == '__main__':
     parser.add_argument('--storage', required=True)
     parser.add_argument('--base-model')
     parser.add_argument('--config', help='Job-specific YAML values to merge over levanter/config/sft.yaml')
+    parser.add_argument('--cache-only', action='store_true')
     parser.add_argument('--dry-run', action='store_true')
     main(parser.parse_args())
