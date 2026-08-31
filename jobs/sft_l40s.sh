@@ -6,7 +6,7 @@
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -R "rusage[mem=8GB]"
-#BSUB -M 24GB
+#BSUB -M 8GB
 #BSUB -oo jobs/logs/sft_l40s_%J.out
 #BSUB -eo jobs/logs/sft_l40s_%J.err
 

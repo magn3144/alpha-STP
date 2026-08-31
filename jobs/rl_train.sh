@@ -11,11 +11,12 @@
 #BSUB -eo jobs/logs/rl_train_%J.err
 
 source "$LS_SUBCWD/jobs/common.sh"
-: "${BASE_MODEL:?Set BASE_MODEL in jobs/config.sh}"
+
+base_model=deepseek-ai/DeepSeek-Prover-V1.5-SFT
 
 python -u RL/run_rl_train.py \
     --exp-dir "$STORAGE/STP_LeanWorkbook_merged" \
-    --train-from "$BASE_MODEL" \
+    --train-from "$base_model" \
     --sft-dataset "$STORAGE/data/SFT/mathlib.json" \
     --merge-from "$STORAGE/STP_LeanWorkbook" \
     --merge-from-rounds 12

@@ -15,7 +15,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import START_THM, START_LEMMA_STMT, END_THM, INVOKED_LEMMA, PROVER_PROMPT
-from utils.RL_utils import update_succ_lemmas, REPO_DIR, train_model, BATCH_SIZE
+from utils.RL_utils import update_succ_lemmas, REPO_DIR, train_model, BATCH_SIZE, load_wandb_config
 from utils.file_utils import path_exists, read_file, write_data
 from utils.timing_utils import configure_timing, EventTimer
 
@@ -157,8 +157,9 @@ if __name__ == "__main__":
     train_ds += new_ds_conjecture
 
     wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))
-    wandb_entity = os.environ["WANDB_ENTITY"]
-    wandb_project = os.environ["WANDB_PROJECT"]
+    wandb_config = load_wandb_config()
+    wandb_entity = wandb_config['entity']
+    wandb_project = wandb_config['project']
     wandb_run_name = '-'.join(args.exp_dir.split('/')[-2:])
     wandb.init(entity=wandb_entity, project=wandb_project, name=wandb_run_name, id=wandb_id, resume="allow")
     logging.info(f'Training dataset size = {len(train_ds)}')

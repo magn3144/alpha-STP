@@ -11,10 +11,11 @@
 #BSUB -eo jobs/logs/rl_sampling_%J.err
 
 source "$LS_SUBCWD/jobs/common.sh"
-: "${BASE_MODEL:?Set BASE_MODEL in jobs/config.sh}"
+
+base_model=deepseek-ai/DeepSeek-Prover-V1.5-SFT
 
 python -u RL/run_rl_sampling.py \
     --exp-dir "$STORAGE/Sampling_LeanWorkbook" \
-    --base-model "$BASE_MODEL" \
+    --base-model "$base_model" \
     --start-round 0 \
     --total-rounds 8

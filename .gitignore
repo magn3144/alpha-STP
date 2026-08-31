@@ -171,8 +171,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# DTU job configuration and logs
-jobs/config.sh
+# DTU job logs
 jobs/logs/*.out
 jobs/logs/*.err
 

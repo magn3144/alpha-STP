@@ -11,8 +11,9 @@
 #BSUB -eo jobs/logs/generation_and_test_%J.err
 
 source "$LS_SUBCWD/jobs/common.sh"
-: "${EVALUATION_MODEL:?Set EVALUATION_MODEL in jobs/config.sh}"
+
+evaluation_model=kfdong/STP_model_Lean_0320
 
 python -u RL/run_generation_and_test.py \
-    --model "$EVALUATION_MODEL" \
+    --model "$evaluation_model" \
     --exp-dir "$STORAGE/STP/benchmark_results"

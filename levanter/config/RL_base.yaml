@@ -5,7 +5,8 @@ trust_remote_code: True
 trainer:
   tracker:
     type: wandb
-    project: "STP_deepseek"
+    entity: s204164
+    project: "alpha-STP"
     tags: ["deepseek-ai/DeepSeek-Prover-V1.5-SFT", "STP"]
 
   mp: p=f32,c=bfloat16

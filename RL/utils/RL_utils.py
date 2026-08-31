@@ -8,6 +8,7 @@ import logging
 import shlex
 import subprocess
 import sys
+import yaml
 import numpy as np
 from copy import deepcopy
 from tqdm.auto import tqdm
@@ -41,6 +42,10 @@ __DEBUG__ = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 REPO_DIR = os.path.abspath(os.path.join(__file__, '../../..'))
 STORAGE = os.getenv('STORAGE', None)
 assert STORAGE is not None, 'STORAGE is not set'
+
+def load_wandb_config():
+    with open(os.path.join(REPO_DIR, 'levanter/config/RL_base.yaml')) as config_file:
+        return yaml.safe_load(config_file)['trainer']['tracker']
 
 def merge_labels(labels: List[str], new_labels: List[str]) -> List[str]:
     return list(set(labels + new_labels))
@@ -687,10 +692,10 @@ def train_model(
     cleanup_dir(output_dir)
 
     training_config = {
-            'trainer.wandb.entity': wandb_entity,
-            'trainer.wandb.project': wandb_project,
-            'trainer.wandb.resume': 'must',
-            'trainer.wandb.id': wandb_id,
+            'trainer.tracker.entity': wandb_entity,
+            'trainer.tracker.project': wandb_project,
+            'trainer.tracker.resume': 'must',
+            'trainer.tracker.id': wandb_id,
 
             'trainer.num_train_steps': max_iters,
             'trainer.train_batch_size': args.batch_size,

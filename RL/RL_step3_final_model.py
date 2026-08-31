@@ -20,7 +20,7 @@ from ray.util import ActorPool
 from utils.model_utils import init_ray_cluster
 from utils.model_utils import START_THM, PROVER_PROMPT
 from utils.file_utils import path_exists, read_file, write_data
-from utils.RL_utils import train_model, BATCH_SIZE, load_ds_from_config
+from utils.RL_utils import train_model, BATCH_SIZE, load_ds_from_config, load_wandb_config
 from utils.timing_utils import configure_timing, EventTimer, timer
 
 def compute_weight(proof):
@@ -201,8 +201,9 @@ if __name__ == "__main__":
     train_ds += new_ds
 
     wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))
-    wandb_entity = os.environ["WANDB_ENTITY"]
-    wandb_project = os.environ["WANDB_PROJECT"]
+    wandb_config = load_wandb_config()
+    wandb_entity = wandb_config['entity']
+    wandb_project = wandb_config['project']
     wandb_run_name = '-'.join(args.exp_dir.split('/')[-2:])
     wandb.init(entity=wandb_entity, project=wandb_project, name=wandb_run_name, id=wandb_id, resume="allow")
     logging.info(f'Training dataset size = {len(train_ds)}')
