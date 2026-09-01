@@ -9,6 +9,7 @@
 - Dont write tests. Its not necessary for this project.
 - Dont edit the README.md, unless I explicitly ask you to.
 - When I ask a question give me a concise answer that gets straight to the point.
+- When I simply ask you a question, just answer the question without changing anything.
 
 
 # Design Choices
