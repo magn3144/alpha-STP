@@ -258,6 +258,25 @@ def train(config: TrainArgs):
         trainer.add_hook(
             callbacks.log_performance_stats(model_config.Pos.size, trainer.config.train_batch_size, flops_per_example), every=1
         )
+        benchmark_log = os.getenv("LEVANTER_BENCHMARK_LOG")
+        if benchmark_log:
+            benchmark_iterations = int(os.environ["LEVANTER_BENCHMARK_ITERATIONS"])
+
+            def record_benchmark_step(info):
+                record = {
+                    "step": info.step,
+                    "duration_s": info.step_duration,
+                    "loss": info.loss,
+                    "batch_size": trainer.config.train_batch_size,
+                    "sequence_length": model_config.Pos.size,
+                    "tokens_per_s": model_config.Pos.size * trainer.config.train_batch_size / info.step_duration,
+                }
+                with open(benchmark_log, "a") as benchmark_file:
+                    benchmark_file.write(json.dumps(record) + "\n")
+                if info.next_step >= benchmark_iterations:
+                    raise SystemExit(0)
+
+            trainer.add_hook(record_benchmark_step, every=1)
         logger.info("Creating trainer state.")
         state = trainer.initial_state(training_key, model=model)
         logger.info("Done.")

@@ -14,7 +14,7 @@ def main(args):
             '--sft_dataset', args.sft_dataset,
             '--dataset_config', args.dataset_config,
             '--epoch', args.epochs,
-            '--lr', args.learning_rate,
+            '--training_config', args.training_config,
             '--include_synthetic_examples',
             '--merge_from', args.merge_from,
             '--merge_from_rounds', args.merge_from_rounds,
@@ -31,6 +31,6 @@ if __name__ == '__main__':
     parser.add_argument('--merge-from-rounds', type=int, required=True)
     parser.add_argument('--dataset-config', default=RL_DIR / 'dataset_configs/leanworkbook.json')
     parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--learning-rate', type=float, default=1e-4)
+    parser.add_argument('--training-config', default='levanter/config/RL_base.yaml')
     parser.add_argument('--dry-run', action='store_true')
     main(parser.parse_args())

@@ -2,13 +2,16 @@
 - [X] Convert .sh experiment scripts to .py scripts
 - [X] Modify code so it runs on GPU
 - [X] Debug code in interactive GPU mode
-- [X] Test which batch size works for SFT run with 2 x A100 80GB
+- [X] Test which batch size works for SFT run
+- [ ] All hyperparameters should be set in the yaml, not CLI.
 - [ ] Do small SFT training run and save intermediate models
 - [X] Implement timers for STP run for benchmarking
 - [ ] WANDB should track cumulative solve rate during STP
 - [ ] Do small STP training run and save intermediate models
 - [ ] Plot cumulative pass rate vs #generated proofs during STP training
-- [ ] Test AlphaProof parallel searches
+- [ ] Run expert iteration on same dataset with same parameters
+- [ ] Run parallel sampling on same dataset with same parameters
+- [X] Test AlphaProof parallel searches
 - [ ] Combine AlphaProof with STP to use AlphaProof as solver
 - [ ] Implement timers for STP AlphaProof run for benchmarking
 - [ ] Train separate conjecturer model with SFT

@@ -2,7 +2,7 @@
 #BSUB -J stp-sft-l40s
 #BSUB -q gpul40s
 #BSUB -W 24:00
-#BSUB -n 4
+#BSUB -n 16
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=1:mode=exclusive_process"
 #BSUB -R "rusage[mem=8GB]"

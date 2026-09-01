@@ -1,0 +1,30 @@
+max_tune_length: 2048
+trust_remote_code: True
+
+trainer:
+  ray:
+    auto_start_cluster: false
+  tracker:
+    type: wandb
+    entity: s204164-danmarks-tekniske-universitet-dtu
+    project: "alpha-STP"
+    tags: ["deepseek-coder-1.3b-base", "STP", "LeanWorkbook-5k"]
+
+  mp: p=f32,c=bfloat16
+  train_batch_size: 16
+  steps_per_eval: 100
+
+  tensor_parallel_axes: ["mlp", "heads"]
+  per_device_eval_parallelism: 8
+  per_device_parallelism: 8
+
+eval_on_first_step: False
+
+optimizer:
+  learning_rate: 4.4194e-6
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.95
+  epsilon: 1E-5
+  warmup: 5
+  min_lr_ratio: 1.0

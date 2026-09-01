@@ -95,10 +95,10 @@ if __name__ == "__main__":
     logging.basicConfig(format='[%(asctime)s - %(name)s - %(levelname)s] %(message)s', level=logging.DEBUG, force=True)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--seed", type=int, default=2333)
     parser.add_argument("--epoch", type=int, default=2)
     parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--training_config", default='levanter/config/RL_base.yaml')
     parser.add_argument("--exp_dir", type=str, default=None)
     parser.add_argument("--base_model", type=str, default=None)
     parser.add_argument("--sft_dataset", type=str, default=None, help="SFT dataset in the training format")
@@ -195,5 +195,7 @@ if __name__ == "__main__":
 
     # train the actor
     max_iters = max(len(train_ds) * args.epoch // args.batch_size, 5)
+    logging.info(f'Training steps = {max_iters}; warmup steps = {min(max_iters - 1, 5)}')
     train_model(os.path.join(args.save_dir, 'RL_model'), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'), 
-                    args, wandb_entity, wandb_project, wandb_id, 'round_network_training')
+                    args, wandb_entity, wandb_project, wandb_id, 'round_network_training',
+                    args.training_config)

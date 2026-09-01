@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument("--sampler", type=str, default='Sampler_conjecture')
     parser.add_argument("--conjecture_multiplier", type=int, default=1)
     parser.add_argument("--samples_per_statement", type=int)
-    parser.add_argument("--statements_per_round", type=int, default=20000)
+    parser.add_argument("--dataset_size", type=int, default=0)
     args = parser.parse_args()
     logging.debug(str(args))
     rng = np.random.default_rng(args.seed)
@@ -45,15 +45,15 @@ if __name__ == "__main__":
 
     with timer('generation_dataset_loading'):
         formatted_ds = load_ds_from_config(args.dataset_config)
+    if args.dataset_size > 0:
+        subset_rng = np.random.default_rng(0)
+        selected_idxs = subset_rng.choice(len(formatted_ds), args.dataset_size, replace=False)
+        formatted_ds = [formatted_ds[idx] for idx in selected_idxs]
     if __DEBUG__:
         formatted_ds = formatted_ds[:1000]
 
     logging.info(f'Number of lemmas to generate: {len(formatted_ds)}')
-    if args.statements_per_round > 0:
-        selected_idxs = rng.choice(len(formatted_ds), args.statements_per_round, replace=False)
-        selected_statements = [formatted_ds[idx] for idx in selected_idxs]
-    else:
-        selected_statements = formatted_ds
+    selected_statements = formatted_ds
     logging.info(f'Selected {len(selected_statements)} statements for this round.')
 
     if round == 0:

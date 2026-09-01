@@ -10,6 +10,8 @@
 - Dont edit the README.md, unless I explicitly ask you to.
 - When I ask a question give me a concise answer that gets straight to the point.
 - When I simply ask you a question, just answer the question without changing anything.
+- There should be a yaml file and bash script for each experiment (like running sft on an A100 40gb).
+- This repo is a fork of the research project https://github.com/kfdong/STP. I want to keep the code as close to the original as possible in order to reproduce their results on a smaller scale with GPUs.
 
 
 # Design Choices

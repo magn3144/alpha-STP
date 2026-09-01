@@ -682,6 +682,7 @@ def train_model(
         wandb_project: str, 
         wandb_id: str, 
         training_event,
+        training_config_path,
         eval_data_path: Optional[str] = None, 
 ) -> None:
     model_name = model_dir.split('/')[-1]
@@ -707,10 +708,9 @@ def train_model(
             'model_name_or_path': train_from,
             'tokenizer_name_or_path': train_from,
             'save_freq': max_iters - 1,
-            'config_path': 'levanter/config/RL_base.yaml',
+            'config_path': training_config_path,
             'hf_save_path': os.path.join(output_dir, 'hf_checkpoints'),
 
-            'optimizer.learning_rate': args.lr,
             'optimizer.warmup': min(max_iters - 1, 5),
         }
     if eval_data_path is not None:

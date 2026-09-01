@@ -31,7 +31,6 @@ def main(args):
             '--exp_dir', round_dir,
             '--dataset_config', args.dataset_config,
             '--epoch', args.epochs,
-            '--lr', args.learning_rate,
             '--merge_from', args.exp_dir,
             '--merge_from_rounds', round_id + 1,
             dry_run=args.dry_run,
@@ -49,6 +48,5 @@ if __name__ == '__main__':
     parser.add_argument('--statements-per-round', type=int, default=0)
     parser.add_argument('--temperature', type=float, default=1.0)
     parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--learning-rate', type=float, default=5e-5)
     parser.add_argument('--dry-run', action='store_true')
     main(parser.parse_args())
