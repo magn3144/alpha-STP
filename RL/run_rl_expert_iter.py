@@ -5,6 +5,7 @@ from utils.experiment_utils import RL_DIR, run_python
 
 
 def main(args):
+    training_config = Path(args.training_config).resolve()
     for round_id in range(args.start_round, args.total_rounds):
         if round_id == 0:
             model = args.base_model
@@ -31,6 +32,7 @@ def main(args):
             '--exp_dir', round_dir,
             '--dataset_config', args.dataset_config,
             '--epoch', args.epochs,
+            '--training_config', training_config,
             '--merge_from', args.exp_dir,
             '--merge_from_rounds', round_id + 1,
             dry_run=args.dry_run,
@@ -48,5 +50,6 @@ if __name__ == '__main__':
     parser.add_argument('--statements-per-round', type=int, default=0)
     parser.add_argument('--temperature', type=float, default=1.0)
     parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--training-config', required=True)
     parser.add_argument('--dry-run', action='store_true')
     main(parser.parse_args())

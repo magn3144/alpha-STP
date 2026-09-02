@@ -97,7 +97,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=2333)
     parser.add_argument("--epoch", type=int, default=2)
-    parser.add_argument("--training_config", default='levanter/config/RL_base.yaml')
+    parser.add_argument("--training_config", required=True)
     parser.add_argument("--exp_dir", type=str, default=None)
     parser.add_argument("--base_model", type=str, default=None)
     parser.add_argument("--sft_dataset", type=str, default=None, help="SFT dataset in the training format")
@@ -154,7 +154,7 @@ if __name__ == "__main__":
     train_ds += new_ds_conjecture
 
     wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))
-    wandb_config = load_wandb_config()
+    wandb_config = load_wandb_config(args.training_config)
     wandb_entity = wandb_config['entity']
     wandb_project = wandb_config['project']
     wandb_run_name = '-'.join(args.exp_dir.split('/')[-2:])

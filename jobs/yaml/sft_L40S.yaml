@@ -1,37 +1,43 @@
-max_tune_length: 2048
+experiment:
+  storage: "${STORAGE}"
+  base_model: "${STORAGE}/models/deepseek-coder-1.3b-base"
 
-model_name_or_path: "deepseek-ai/deepseek-coder-1.3b-base"
-tokenizer_name_or_path: "deepseek-ai/deepseek-coder-1.3b-base"
-trust_remote_code: True
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
 
-trainer:
-  ray:
-    auto_start_cluster: false
-  tracker:
-    type: wandb
-    entity: s204164-danmarks-tekniske-universitet-dtu
-    project: "alpha-STP"
-    name: "deepseek-sft"
-    tags: ["deepseek-ai/deepseek-coder-1.3b-base", "sft"]
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deepseek-sft
+      tags: [deepseek-ai/deepseek-coder-1.3b-base, sft]
 
-  mp: p=f32,c=bfloat16
+    seed: 0
+    mp: p=f32,c=bfloat16
+    train_batch_size: 20
+    num_train_steps: 1005
+    steps_per_eval: 40
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 20
+    per_device_parallelism: 20
 
-  train_batch_size: 20
-  num_train_steps: 1005
-  steps_per_eval: 40
+  # Export at steps 126, 252, 378, 504, 630, 756, 882, and 1004.
+  save_freq: 126
+  eval_on_first_step: false
 
-  tensor_parallel_axes: ["mlp", "heads"]
-  per_device_eval_parallelism: 20
-  per_device_parallelism: 20
-# Export at steps 126, 252, 378, 504, 630, 756, 882, and 1004.
-save_freq: 126
-eval_on_first_step: False
-
-optimizer:
-  learning_rate: 1e-5
-  weight_decay: 0.0
-  beta1: 0.9
-  beta2: 0.95
-  epsilon: 1E-5
-  warmup: 100
-  min_lr_ratio: 1.0
+  optimizer:
+    learning_rate: 1.0e-5
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    warmup: 100
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0

@@ -19,4 +19,5 @@ python -u RL/run_rl_train.py \
     --train-from "$base_model" \
     --sft-dataset "$STORAGE/data/SFT/mathlib.json" \
     --merge-from "$STORAGE/STP_LeanWorkbook" \
-    --merge-from-rounds 12
+    --merge-from-rounds 12 \
+    --training-config jobs/yaml/rl_2x_A100_40gb.yaml

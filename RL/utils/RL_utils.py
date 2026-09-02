@@ -30,6 +30,7 @@ from utils.file_utils import cleanup_dir, copy_dir, move_file, read_file, write_
 from utils.model_utils import END_THM, START_LEMMA_STMT
 from utils.prover.lean.verifier import create_ray_lean4_actors, TEST_BATCH_SIZE
 from utils.timing_utils import record_event, timer
+from utils.config_utils import load_experiment_config
 from concurrent.futures import ProcessPoolExecutor
 
 BATCH_SIZE = 2048
@@ -45,13 +46,11 @@ STORAGE = os.getenv('STORAGE', None)
 assert STORAGE is not None, 'STORAGE is not set'
 
 
-def load_wandb_config():
-    with open(os.path.join(REPO_DIR, 'levanter/config/RL_base.yaml')) as config_file:
-        return yaml.safe_load(config_file)['trainer']['tracker']
+def load_wandb_config(path):
+    return load_training_config(path)['trainer']['tracker']
 
 def load_training_config(path):
-    with open(path) as config_file:
-        return yaml.safe_load(config_file)
+    return load_experiment_config(path, 'rl')['training']
 
 def merge_labels(labels: List[str], new_labels: List[str]) -> List[str]:
     return list(set(labels + new_labels))
@@ -727,7 +726,6 @@ def train_model(
         }
 
     config = load_training_config(training_config_path)
-    del config['dataset_size']
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as config_file:
         yaml.safe_dump(config, config_file)
         config_file.flush()

@@ -12,10 +12,5 @@
 
 source "$LS_SUBCWD/jobs/common.sh"
 
-base_model=deepseek-ai/DeepSeek-Prover-V1.5-SFT
-
 python -u RL/run_rl_steps.py \
-    --exp-dir "$STORAGE/STP_LeanWorkbook" \
-    --base-model "$base_model" \
-    --start-round 0 \
-    --total-rounds 12
+    --config jobs/yaml/rl_2x_A100_40gb.yaml

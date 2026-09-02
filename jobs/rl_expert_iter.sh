@@ -18,4 +18,5 @@ python -u RL/run_rl_expert_iter.py \
     --exp-dir "$STORAGE/Expit_LeanWorkbook" \
     --base-model "$base_model" \
     --start-round 0 \
-    --total-rounds 12
+    --total-rounds 12 \
+    --training-config jobs/yaml/rl_2x_A100_40gb.yaml

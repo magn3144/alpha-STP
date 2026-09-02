@@ -14,12 +14,7 @@
 source "$LS_SUBCWD/jobs/common.sh"
 
 start_round="${START_ROUND:-0}"
-end_round="${END_ROUND:-3}"
-base_model="$STORAGE/models/deepseek-coder-1.3b-base"
 
 python -u RL/run_rl_steps.py \
-    --exp-dir "$STORAGE/STP_LeanWorkbook_5k" \
-    --base-model "$base_model" \
-    --training-config jobs/yaml/rl_2x_A100_40gb.yaml \
-    --start-round "$start_round" \
-    --total-rounds "$end_round"
+    --config jobs/yaml/rl_2x_A100_40gb.yaml \
+    --start-round "$start_round"

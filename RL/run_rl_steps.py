@@ -1,32 +1,37 @@
 import argparse
 from pathlib import Path
 
+from utils.config_utils import load_experiment_config
 from utils.experiment_utils import RL_DIR, run_python
-from utils.RL_utils import load_training_config
 from utils.timing_utils import configure_timing, timer
 
 
 def main(args):
-    training_config = load_training_config(args.training_config)
-    dataset_size = training_config['dataset_size']
-    batch_size = training_config['trainer']['train_batch_size']
-    configure_timing(args.exp_dir, new_session=True)
+    config_path = Path(args.config).resolve()
+    config = load_experiment_config(config_path, 'rl')
+    experiment = config['experiment']
+    training = config['training']
+    if not 0 <= args.start_round < experiment['total_rounds']:
+        raise ValueError('start_round must be between zero and total_rounds - 1')
+    exp_dir = Path(experiment['exp_dir'])
+    dataset_size = experiment['dataset_size']
+    batch_size = training['trainer']['train_batch_size']
+    configure_timing(exp_dir, new_session=True)
     print(
         f'Configuration: dataset_size={dataset_size}, batch_size={batch_size}',
         flush=True,
     )
     with timer('stp_run'):
-        for round_id in range(args.start_round, args.total_rounds):
+        for round_id in range(args.start_round, experiment['total_rounds']):
             if round_id == 0:
-                model = args.base_model
+                model = experiment['base_model']
             else:
-                model = Path(args.exp_dir) / f'round{round_id - 1}' / 'RL_model'
+                model = exp_dir / f'round{round_id - 1}' / 'RL_model'
 
-            samples_per_statement = args.samples_per_statement
-            if samples_per_statement is None:
-                samples_per_statement = 32 if round_id == 0 else 16
+            samples_key = 'first_round' if round_id == 0 else 'later_rounds'
+            samples_per_statement = experiment['samples_per_statement'][samples_key]
 
-            round_dir = Path(args.exp_dir) / f'round{round_id}'
+            round_dir = exp_dir / f'round{round_id}'
             print(f'Starting self-play round {round_id} with model {model}', flush=True)
             with timer('round', round=round_id):
                 with timer('generation_step', round=round_id):
@@ -35,10 +40,10 @@ def main(args):
                         '--model', model,
                         '--exp_dir', round_dir,
                         '--seed', round_id,
-                        '--temperature', args.temperature,
-                        '--dataset_config', args.dataset_config,
-                        '--sampler', 'Sampler_base',
-                        '--conjecture_multiplier', 1,
+                        '--temperature', experiment['temperature'],
+                        '--dataset_config', experiment['dataset_config'],
+                        '--sampler', experiment['sampler'],
+                        '--conjecture_multiplier', experiment['conjecture_multiplier'],
                         '--samples_per_statement', samples_per_statement,
                         '--dataset_size', dataset_size,
                         dry_run=args.dry_run,
@@ -48,22 +53,15 @@ def main(args):
                         RL_DIR / 'RL_step2_train.py',
                         '--base_model', model,
                         '--exp_dir', round_dir,
-                        '--epoch', args.epochs,
-                        '--training_config', args.training_config,
+                        '--epoch', experiment['epochs'],
+                        '--training_config', config_path,
                         dry_run=args.dry_run,
                     )
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run sequential STP self-play rounds.')
-    parser.add_argument('--exp-dir', required=True)
-    parser.add_argument('--base-model', required=True)
-    parser.add_argument('--dataset-config', default=RL_DIR / 'dataset_configs/leanworkbook.json')
+    parser.add_argument('--config', required=True)
     parser.add_argument('--start-round', type=int, default=0)
-    parser.add_argument('--total-rounds', type=int, default=12)
-    parser.add_argument('--samples-per-statement', type=int)
-    parser.add_argument('--temperature', type=float, default=1.0)
-    parser.add_argument('--epochs', type=int, default=1)
-    parser.add_argument('--training-config', default='levanter/config/RL_base.yaml')
     parser.add_argument('--dry-run', action='store_true')
     main(parser.parse_args())

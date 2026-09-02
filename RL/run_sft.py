@@ -4,27 +4,16 @@ from pathlib import Path
 
 import yaml
 
+from utils.config_utils import load_experiment_config
 from utils.experiment_utils import REPO_DIR, levanter_environment, run_python
 
 
-def merge_configs(base, override):
-    merged = base.copy()
-    for key, value in override.items():
-        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
-            merged[key] = merge_configs(merged[key], value)
-        else:
-            merged[key] = value
-    return merged
-
-
-def load_config(path):
-    with open(path) as config_file:
-        return yaml.safe_load(config_file) or {}
-
-
 def main(args):
-    storage = Path(args.storage)
-    base_model = args.base_model or storage / 'models/deepseek-coder-1.3b-base'
+    config = load_experiment_config(args.config, 'sft')
+    experiment = config['experiment']
+    training = config['training']
+    storage = Path(experiment['storage'])
+    base_model = Path(experiment['base_model'])
     train_data = storage / 'data/SFT/train.json'
     validation_data = storage / 'data/SFT/validation.json'
     if not args.dry_run:
@@ -33,17 +22,13 @@ def main(args):
             paths = ', '.join(str(path) for path in missing)
             raise FileNotFoundError(f'Missing generated SFT split(s): {paths}. Run RL/prepare_datasets.py first.')
 
-    base_config_path = REPO_DIR / 'levanter/config/sft.yaml'
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as config_file:
-        config = load_config(base_config_path)
-        if args.config:
-            config = merge_configs(config, load_config(args.config))
         if args.cache_only:
-            config['cache_only'] = True
-        yaml.safe_dump(config, config_file)
+            training['cache_only'] = True
+        yaml.safe_dump(training, config_file)
         config_file.flush()
 
-        cache_name = f'{Path(base_model).name}_{config["max_tune_length"]}'
+        cache_name = f'{base_model.name}_{training["max_tune_length"]}'
         cache_dir = storage / 'data/SFT/cache' / cache_name
 
         run_python(
@@ -65,9 +50,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run supervised fine-tuning with Levanter.')
-    parser.add_argument('--storage', required=True)
-    parser.add_argument('--base-model')
-    parser.add_argument('--config', help='Job-specific YAML values to merge over levanter/config/sft.yaml')
+    parser.add_argument('--config', required=True)
     parser.add_argument('--cache-only', action='store_true')
     parser.add_argument('--dry-run', action='store_true')
     main(parser.parse_args())

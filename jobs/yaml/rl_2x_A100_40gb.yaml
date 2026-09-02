@@ -1,31 +1,49 @@
-dataset_size: 5000
-max_tune_length: 2048
-trust_remote_code: True
+experiment:
+  exp_dir: "${STORAGE}/STP_LeanWorkbook_5k"
+  base_model: "${STORAGE}/models/deepseek-coder-1.3b-base"
+  dataset_config: RL/dataset_configs/leanworkbook.json
+  dataset_size: 5000
+  total_rounds: 3
+  samples_per_statement:
+    first_round: 32
+    later_rounds: 16
+  temperature: 1.0
+  epochs: 1
+  sampler: Sampler_base
+  conjecture_multiplier: 1
 
-trainer:
-  ray:
-    auto_start_cluster: false
-  tracker:
-    type: wandb
-    entity: s204164-danmarks-tekniske-universitet-dtu
-    project: "alpha-STP"
-    tags: ["deepseek-coder-1.3b-base", "STP", "LeanWorkbook-5k"]
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
 
-  mp: p=f32,c=bfloat16
-  train_batch_size: 32
-  steps_per_eval: 100
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deepseek-rl
+      tags: [deepseek-coder-1.3b-base, STP, LeanWorkbook-5k]
 
-  tensor_parallel_axes: ["mlp", "heads"]
-  per_device_eval_parallelism: 16
-  per_device_parallelism: 16
+    seed: 0
+    mp: p=f32,c=bfloat16
+    train_batch_size: 32
+    steps_per_eval: 100
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 16
+    per_device_parallelism: 16
 
-eval_on_first_step: False
+  eval_on_first_step: false
 
-optimizer:
-  learning_rate: 6.25e-6
-  weight_decay: 0.0
-  beta1: 0.9
-  beta2: 0.95
-  epsilon: 1E-5
-  warmup: 5
-  min_lr_ratio: 1.0
+  optimizer:
+    learning_rate: 6.25e-6
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0

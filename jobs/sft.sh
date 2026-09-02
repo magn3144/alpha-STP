@@ -14,4 +14,4 @@
 source "$LS_SUBCWD/jobs/common.sh"
 
 python -u RL/run_sft.py \
-    --storage "$STORAGE"
+    --config jobs/yaml/sft_L40S.yaml
