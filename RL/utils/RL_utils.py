@@ -8,6 +8,7 @@ import logging
 import shlex
 import subprocess
 import sys
+import tempfile
 import yaml
 import numpy as np
 from copy import deepcopy
@@ -43,9 +44,14 @@ REPO_DIR = os.path.abspath(os.path.join(__file__, '../../..'))
 STORAGE = os.getenv('STORAGE', None)
 assert STORAGE is not None, 'STORAGE is not set'
 
+
 def load_wandb_config():
     with open(os.path.join(REPO_DIR, 'levanter/config/RL_base.yaml')) as config_file:
         return yaml.safe_load(config_file)['trainer']['tracker']
+
+def load_training_config(path):
+    with open(path) as config_file:
+        return yaml.safe_load(config_file)
 
 def merge_labels(labels: List[str], new_labels: List[str]) -> List[str]:
     return list(set(labels + new_labels))
@@ -702,7 +708,6 @@ def train_model(
             'trainer.tracker.id': wandb_id,
 
             'trainer.num_train_steps': max_iters,
-            'trainer.train_batch_size': args.batch_size,
             'trainer.checkpointer.base_path': os.path.join(output_dir, 'checkpoints'),
             'train_data': train_data_path,
             'train_data_cache_dir': os.path.join(data_cache_dir, 'train'),
@@ -711,7 +716,6 @@ def train_model(
             'model_name_or_path': train_from,
             'tokenizer_name_or_path': train_from,
             'save_freq': max_iters - 1,
-            'config_path': training_config_path,
             'hf_save_path': os.path.join(output_dir, 'hf_checkpoints'),
 
             'optimizer.warmup': min(max_iters - 1, 5),
@@ -722,22 +726,29 @@ def train_model(
             'eval_data_cache_dir': os.path.join(data_cache_dir, 'eval')
         }
 
-    LEV_ROOT = os.path.join(REPO_DIR, 'levanter')
-    training_cmd = [sys.executable, 'levanter/examples/weighted_lm.py']
-    for k, v in training_config.items():
-        training_cmd.append(f'--{k}')
-        if v is None:
-            continue
-        training_cmd.append(str(v))
+    config = load_training_config(training_config_path)
+    del config['dataset_size']
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as config_file:
+        yaml.safe_dump(config, config_file)
+        config_file.flush()
+        training_config['config_path'] = config_file.name
 
-    env = os.environ.copy()
-    python_paths = [LEV_ROOT, os.path.join(LEV_ROOT, 'src'), os.path.join(LEV_ROOT, 'examples')]
-    if env.get('PYTHONPATH'):
-        python_paths.append(env['PYTHONPATH'])
-    env['PYTHONPATH'] = os.pathsep.join(python_paths)
-    logging.debug(shlex.join(training_cmd))
-    with timer(training_event):
-        subprocess.run(training_cmd, cwd=REPO_DIR, env=env, check=True)
+        LEV_ROOT = os.path.join(REPO_DIR, 'levanter')
+        training_cmd = [sys.executable, 'levanter/examples/weighted_lm.py']
+        for k, v in training_config.items():
+            training_cmd.append(f'--{k}')
+            if v is None:
+                continue
+            training_cmd.append(str(v))
+
+        env = os.environ.copy()
+        python_paths = [LEV_ROOT, os.path.join(LEV_ROOT, 'src'), os.path.join(LEV_ROOT, 'examples')]
+        if env.get('PYTHONPATH'):
+            python_paths.append(env['PYTHONPATH'])
+        env['PYTHONPATH'] = os.pathsep.join(python_paths)
+        logging.debug(shlex.join(training_cmd))
+        with timer(training_event):
+            subprocess.run(training_cmd, cwd=REPO_DIR, env=env, check=True)
 
     # move the trained model
     trained_model_path = os.path.join(output_dir, 'hf_checkpoints', wandb_id, f'step-{max_iters - 1}')

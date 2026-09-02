@@ -21,7 +21,5 @@ python -u RL/run_rl_steps.py \
     --exp-dir "$STORAGE/STP_LeanWorkbook_5k" \
     --base-model "$base_model" \
     --training-config jobs/yaml/rl_2x_A100_40gb.yaml \
-    --dataset-size 5000 \
-    --batch-size 16 \
     --start-round "$start_round" \
     --total-rounds "$end_round"

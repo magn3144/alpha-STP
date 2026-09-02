@@ -20,7 +20,7 @@ from ray.util import ActorPool
 from utils.model_utils import init_ray_cluster
 from utils.model_utils import START_THM, PROVER_PROMPT
 from utils.file_utils import path_exists, read_file, write_data
-from utils.RL_utils import train_model, BATCH_SIZE, load_ds_from_config, load_wandb_config
+from utils.RL_utils import train_model, load_ds_from_config, load_training_config, load_wandb_config
 from utils.timing_utils import configure_timing, EventTimer, timer
 
 def compute_weight(proof):
@@ -133,7 +133,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=2333)
     parser.add_argument("--epoch", type=int, default=2)
-    parser.add_argument("--batch_size", type=int, default=BATCH_SIZE)
     parser.add_argument("--training_config", default='levanter/config/RL_base.yaml')
     parser.add_argument("--exp_dir", type=str, default=None)
     parser.add_argument("--base_model", type=str, default=None)
@@ -228,7 +227,8 @@ if __name__ == "__main__":
     preparation_timer.stop()
 
     # train the actor
-    max_iters = max(len(train_ds) * args.epoch // args.batch_size, 10)
+    batch_size = load_training_config(args.training_config)['trainer']['train_batch_size']
+    max_iters = max(len(train_ds) * args.epoch // batch_size, 10)
     train_model(os.path.join(args.save_dir, 'RL_model'), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'), 
                     args, wandb_entity, wandb_project, wandb_id, 'final_network_training',
                     args.training_config)
