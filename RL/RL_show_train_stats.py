@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import get_lemma_key, insert_lemma
 from utils.file_utils import path_exists, read_file
-from utils.RL_utils import load_ds_from_config
+from utils.RL_utils import calculate_cumulative_solve_rate, load_ds_from_config
 
 BATCH_SIZE = 2048
 
@@ -59,7 +59,7 @@ if __name__ == "__main__":
             if test_info.get('complete', False) and (key in lemma_mapping):
                 succ_lemmas.add(lemma_mapping[key])
 
-        succ_rate = len(succ_lemmas.intersection(relevant_lemmas)) / len(relevant_lemmas)
+        succ_rate = calculate_cumulative_solve_rate(succ_lemmas, relevant_lemmas)
         print('=' * 10 + f' Round {round} ' + '=' * 10)
         print(f'Cumulative succ rate = {succ_rate * 100:.3f}')
         print(f'Number of generated proofs = ', len(generated_proofs))

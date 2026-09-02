@@ -15,7 +15,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import START_THM, START_LEMMA_STMT, END_THM, INVOKED_LEMMA, PROVER_PROMPT
-from utils.RL_utils import update_succ_lemmas, REPO_DIR, train_model, BATCH_SIZE, load_wandb_config
+from utils.RL_utils import calculate_cumulative_solve_rate, REPO_DIR, train_model, BATCH_SIZE, load_wandb_config
 from utils.file_utils import path_exists, read_file, write_data
 from utils.timing_utils import configure_timing, EventTimer
 
@@ -125,14 +125,12 @@ if __name__ == "__main__":
 
     generated_proofs = []
     conjecture_examples = []
-    lemma_mapping = {}
-    succ_lemmas = set()
     generated_proofs = read_file(os.path.join(args.exp_dir, 'generated_proofs.json'))
     conjecture_examples = read_file(os.path.join(args.exp_dir, 'conjecture_examples.json'))
+    sampler = read_file(os.path.join(args.exp_dir, 'sampler.pkl'))
     assert generated_proofs is not None, f"Failed to read {os.path.join(args.exp_dir, 'generated_proofs.json')}"
     assert conjecture_examples is not None, f"Failed to read {os.path.join(args.exp_dir, 'conjecture_examples.json')}"
-    
-    update_succ_lemmas(generated_proofs, succ_lemmas)
+    assert sampler is not None, f"Failed to read {os.path.join(args.exp_dir, 'sampler.pkl')}"
 
     all_test_results = defaultdict(list)
     for test_info in generated_proofs:
@@ -183,6 +181,7 @@ if __name__ == "__main__":
         'monitoring/average_unique_proofs': get_average_unique_proofs([test_info for test_info in generated_proofs if test_info.get('round', 0) == round]),
         'monitoring/unique_invokes_in_Pprime': len(set(test_info['shared_lemma'] for test_info in conjecture_examples)),
         'monitoring/unique_invokes_in_proofs': get_unique_invokes_in_proofs(valid_proofs),
+        'monitoring/cumulative_solve_rate': calculate_cumulative_solve_rate(sampler['succ_lemmas'], sampler['relevant_lemmas']),
     }
     wandb.log(metrics)
     logging.info(str(metrics))

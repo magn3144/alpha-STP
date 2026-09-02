@@ -86,6 +86,9 @@ def collect_conjecture(pool, num_workers, lemmas_to_generate, lemma_mapping, max
 def update_succ_lemmas(generated_proofs: List[Dict], succ_lemmas: Set[int]) -> None:
     succ_lemmas |= set(test_info['lemma_id'] for test_info in generated_proofs if test_info.get('complete', False))
 
+def calculate_cumulative_solve_rate(succ_lemmas, relevant_lemmas):
+    return len(set(succ_lemmas).intersection(relevant_lemmas)) / len(relevant_lemmas)
+
 def filter_by_ratio(generated_proofs, filter_inputs, denominator, threshold):
     # first we filter based on the length of the goal
     min_p2s_ratio = defaultdict(lambda: 1e5)
