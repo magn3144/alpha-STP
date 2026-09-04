@@ -12,10 +12,8 @@
 
 source "$LS_SUBCWD/jobs/common.sh"
 
-base_model=deepseek-ai/DeepSeek-Prover-V1.5-SFT
+start_round="${START_ROUND:-0}"
 
 python -u RL/run_rl_sampling.py \
-    --exp-dir "$STORAGE/Sampling_LeanWorkbook" \
-    --base-model "$base_model" \
-    --start-round 0 \
-    --total-rounds 8
+    --config jobs/yaml/rl_sampling_A100.yaml \
+    --start-round "$start_round"

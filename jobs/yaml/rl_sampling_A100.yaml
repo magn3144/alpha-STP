@@ -1,0 +1,11 @@
+experiment:
+  type: parallel_sampling
+  exp_dir: "${STORAGE}/Sampling_LeanWorkbook"
+  base_model: deepseek-ai/DeepSeek-Prover-V1.5-SFT
+  dataset_config: RL/dataset_configs/leanworkbook.json
+  dataset_size: 0
+  total_rounds: 8
+  seed: 0
+  samples_per_statement: 64
+  temperature: 1.0
+  sampler: Sampler_naive

@@ -1,17 +1,15 @@
 experiment:
-  type: rl
-  exp_dir: "${STORAGE}/STP_LeanWorkbook_5k"
-  base_model: "${STORAGE}/models/deepseek-coder-1.3b-base"
+  type: expert_iteration
+  exp_dir: "${STORAGE}/Expit_LeanWorkbook"
+  base_model: deepseek-ai/DeepSeek-Prover-V1.5-SFT
   dataset_config: RL/dataset_configs/leanworkbook.json
-  dataset_size: 5000
-  total_rounds: 3
-  samples_per_statement:
-    first_round: 32
-    later_rounds: 16
+  dataset_size: 0
+  total_rounds: 12
+  seed: 0
+  samples_per_statement: 64
   temperature: 1.0
   epochs: 1
-  sampler: Sampler_base
-  conjecture_multiplier: 1
+  sampler: Sampler_naive
 
 training:
   max_tune_length: 2048
@@ -24,8 +22,8 @@ training:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
       project: alpha-STP
-      name: deepseek-rl
-      tags: [deepseek-coder-1.3b-base, STP, LeanWorkbook-5k]
+      name: deepseek-expert-iteration
+      tags: [DeepSeek-Prover-V1.5-SFT, expert-iteration, LeanWorkbook]
 
     seed: 0
     mp: p=f32,c=bfloat16

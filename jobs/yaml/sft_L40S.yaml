@@ -1,4 +1,5 @@
 experiment:
+  type: sft
   storage: "${STORAGE}"
   base_model: "${STORAGE}/models/deepseek-coder-1.3b-base"
 

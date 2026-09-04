@@ -50,7 +50,7 @@ def load_wandb_config(path):
     return load_training_config(path)['trainer']['tracker']
 
 def load_training_config(path):
-    return load_experiment_config(path, 'rl')['training']
+    return load_experiment_config(path)['training']
 
 def merge_labels(labels: List[str], new_labels: List[str]) -> List[str]:
     return list(set(labels + new_labels))
