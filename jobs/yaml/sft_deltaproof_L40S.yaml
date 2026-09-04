@@ -1,0 +1,43 @@
+experiment:
+  type: sft
+  storage: "${STORAGE}/DeltaProof"
+  base_model: "${STORAGE}/models/deepseek-coder-1.3b-base"
+
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
+
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deepseek-sft-deltaproof-data
+      tags: [deepseek-ai/deepseek-coder-1.3b-base, sft, deltaproof-data]
+
+    seed: 0
+    mp: p=f32,c=bfloat16
+    train_batch_size: 20
+    num_train_steps: 819
+    steps_per_eval: 40
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 20
+    per_device_parallelism: 20
+
+  save_freq: 102
+  eval_on_first_step: false
+
+  optimizer:
+    learning_rate: 1.0e-5
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    warmup: 82
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0
