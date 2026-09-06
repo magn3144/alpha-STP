@@ -15,7 +15,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import START_THM, START_LEMMA_STMT, END_THM, INVOKED_LEMMA, PROVER_PROMPT
-from utils.RL_utils import calculate_cumulative_solve_rate, REPO_DIR, train_model, load_training_config, load_wandb_config
+from utils.RL_utils import calculate_cumulative_solve_rate, train_model, load_training_config, load_wandb_config
 from utils.file_utils import path_exists, read_file, write_data
 from utils.timing_utils import configure_timing, EventTimer
 
@@ -50,19 +50,15 @@ def format_and_deduplicate_dataset(valid_proofs, replay_buffer, generated_proofs
     return dataset
 
 def format_and_deduplicate_conjecture(dataset, replay_buffer):
-    avaliable_lemmas = read_file(os.path.join(REPO_DIR, 'assets/data/theorem_dict.pkl'))
-    avaliable_lemmas = {k: v[1].split(':=')[0].strip() for k, v in avaliable_lemmas.items()}
-    avaliable_lemmas[''] = 'theorem true: True'
-
     known_examples = set((test_info['prompt'], test_info['target']) for test_info in replay_buffer)
     ret = []
     if any('weight' not in test_info for test_info in dataset):
         logging.warning('Weights not found in conjecture dataset!!')
         
     for test_info in dataset:
-        shared_lemma, easy_proof, easy_theorem, hard_theorem = \
-            test_info['shared_lemma'], test_info['easy_proof'], test_info['easy_statement'], test_info['statement']
-        shared_lemma_statement = avaliable_lemmas[shared_lemma]
+        easy_proof, easy_theorem, hard_theorem = \
+            test_info['easy_proof'], test_info['easy_statement'], test_info['statement']
+        shared_lemma_statement = test_info['shared_lemma_statement']
 
         prompt = f'{PROVER_PROMPT}\n' \
             f'{INVOKED_LEMMA}\n{shared_lemma_statement.strip()}\n{START_LEMMA_STMT}\n' \
@@ -102,6 +98,8 @@ if __name__ == "__main__":
     parser.add_argument("--base_model", type=str, default=None)
     parser.add_argument("--sft_dataset", type=str, default=None, help="SFT dataset in the training format")
     parser.add_argument("--save_dir", type=str, default=None)
+    parser.add_argument("--conjecturer_only", action='store_true')
+    parser.add_argument("--model_name", default='RL_model')
     args = parser.parse_args()
     if args.save_dir is None:
         args.save_dir = args.exp_dir
@@ -110,7 +108,7 @@ if __name__ == "__main__":
     round = int(args.exp_dir.rsplit('/', 1)[-1][len('round'):])
     configure_timing(args.exp_dir, round_id=round)
 
-    if path_exists(os.path.join(args.exp_dir, 'RL_model')) and (args.save_dir == args.exp_dir):
+    if path_exists(os.path.join(args.exp_dir, args.model_name)) and (args.save_dir == args.exp_dir):
         logging.warning(f"Model already trained. Exiting...")
         exit(0)
 
@@ -139,18 +137,25 @@ if __name__ == "__main__":
     logging.info(f'Number of unique theorems: {len(all_test_results)}')
     
     valid_proofs = [test_info for test_info in reversed(generated_proofs) if test_info.get('complete', False)]
-    # filter out proofs with too high success rate
-    valid_proofs = [test_info for test_info in valid_proofs if np.mean(all_test_results[test_info['statement']]) <= 0.5]
-    new_ds = format_and_deduplicate_dataset(valid_proofs, train_ds, generated_proofs)
-    if len(new_ds) == 0:
-        logging.error(f'[Erorr] No new data generated. Exiting...')
-        preparation_timer.stop('failed', reason='no_new_data')
-        exit(1)
-    logging.info(f'Number of new data: {len(new_ds)}')
-    train_ds += new_ds
+    if args.conjecturer_only:
+        new_ds = []
+    else:
+        # filter out proofs with too high success rate
+        valid_proofs = [test_info for test_info in valid_proofs if np.mean(all_test_results[test_info['statement']]) <= 0.5]
+        new_ds = format_and_deduplicate_dataset(valid_proofs, train_ds, generated_proofs)
+        if len(new_ds) == 0:
+            logging.error(f'[Erorr] No new data generated. Exiting...')
+            preparation_timer.stop('failed', reason='no_new_data')
+            exit(1)
+        logging.info(f'Number of new data: {len(new_ds)}')
+        train_ds += new_ds
 
     new_ds_conjecture = format_and_deduplicate_conjecture(conjecture_examples, train_ds)
     logging.info(f'Number of new easy to hard examples: {len(new_ds_conjecture)}')
+    if args.conjecturer_only and not new_ds_conjecture:
+        logging.info('No new conjecturer examples. Keeping the previous checkpoint.')
+        preparation_timer.stop('skipped', reason='no_new_conjectures')
+        exit(0)
     train_ds += new_ds_conjecture
 
     wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))
@@ -195,6 +200,6 @@ if __name__ == "__main__":
     batch_size = load_training_config(args.training_config)['trainer']['train_batch_size']
     max_iters = max(len(train_ds) * args.epoch // batch_size, 5)
     logging.info(f'Training steps = {max_iters}; warmup steps = {min(max_iters - 1, 5)}')
-    train_model(os.path.join(args.save_dir, 'RL_model'), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'), 
+    train_model(os.path.join(args.save_dir, args.model_name), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'),
                     args, wandb_entity, wandb_project, wandb_id, 'round_network_training',
                     args.training_config)

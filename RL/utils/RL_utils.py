@@ -83,7 +83,8 @@ def collect_conjecture(pool, num_workers, lemmas_to_generate, lemma_mapping, max
                          'easy_statement': test_info['statement'],
                          'easy_proof': test_info['proof'],
                          'header': test_info.get('header', None),
-                         'shared_lemma': test_info['shared_lemma']}
+                         'shared_lemma': test_info['shared_lemma'],
+                         'shared_lemma_statement': test_info['shared_lemma_statement']}
         insert_lemma(lemma_mapping, new_test_info)
         generated_proofs.append(new_test_info)
     return generated_proofs
@@ -536,6 +537,7 @@ class Sampler_base:
                     no_invoke_count += 1
                     new_test_info = deepcopy(test_info)
                     new_test_info['shared_lemma'] = ''
+                    new_test_info['shared_lemma_statement'] = self.avaliable_lemmas['']
                     conjecture_examples.append(new_test_info)
                     dedup_set.add(test_info['statement'])
                     

@@ -16,6 +16,13 @@ def run_python(script, *args, cwd=RL_DIR, env=None, dry_run=False):
         subprocess.run(command, cwd=cwd, env=env, check=True)
 
 
+def run_external_python(python, module, *args, cwd, env=None, dry_run=False):
+    command = [str(python), '-u', '-m', module, *(str(arg) for arg in args)]
+    print(f'+ {shlex.join(command)}', flush=True)
+    if not dry_run:
+        subprocess.run(command, cwd=cwd, env=env, check=True)
+
+
 def levanter_environment():
     env = os.environ.copy()
     levanter_dir = REPO_DIR / 'levanter'

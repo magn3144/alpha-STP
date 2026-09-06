@@ -12,6 +12,8 @@ experiment:
   epochs: 1
   sampler: Sampler_base
   conjecture_multiplier: 1
+  solver:
+    type: llm
 
 training:
   max_tune_length: 2048

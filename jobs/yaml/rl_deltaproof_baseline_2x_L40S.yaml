@@ -1,0 +1,71 @@
+experiment:
+  type: rl
+  exp_dir: "${STORAGE}/DeltaProof/baseline_codet5p_770m_1_8"
+  conjecturer_model: "${STORAGE}/DeltaProof/SFT/vz6xihl7/step-818"
+  conjecturer_sft_dataset: "${STORAGE}/DeltaProof/data/SFT/train.json"
+  dataset_size: 0
+  total_rounds: 5
+  temperature: 1.0
+  epochs: 1
+  sampler: Sampler_base
+  conjecture_multiplier: 2
+  solver:
+    type: deltaproof
+    repo_dir: "${DELTA_PROOF}"
+    python: "${DELTA_PROOF}/.venv/bin/python"
+    config: "${DELTA_PROOF}/alphaproof/yaml/codet5p_770m_2x_l40s_1_8.yaml"
+    sft_run_dir: "${DELTA_PROOF}/data/runs/sft_codet5p_770m_l40s_1_8_01"
+    run_dir: "${DELTA_PROOF}/data/runs/baseline_codet5p_770m_2x_l40s_1_8_01"
+    dataset_path: "${DELTA_PROOF}/data/dataset/numina_math_lean_passing_1_8/train.jsonl"
+    lean_project: "${DELTA_PROOF}/lean_project"
+    lake_path: "${HOME}/.elan/bin/lake"
+    imports: [Mathlib]
+    attempts_per_round: 9600
+    conjecture_attempts: 16
+    conjecture_fraction: 0
+    learner_steps_per_round: 2000
+    num_simulations: 64
+    num_sampled_actions: 6
+    tactic_timeout: 1.0
+    final_check_timeout: 300.0
+    parallel_searches: 96
+    max_concurrent_lean_imports: 16
+    inference_num_gpus: 2
+    inference_batch_size: 32
+    inference_batch_timeout: 0.05
+
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
+
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deltaproof-baseline-codet5p-770m-1-8
+      tags: [DeltaProof, baseline, codet5p-770m, NuminaMath, 1-8]
+
+    seed: 0
+    mp: p=f32,c=bfloat16
+    train_batch_size: 32
+    steps_per_eval: 100
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 16
+    per_device_parallelism: 16
+
+  eval_on_first_step: false
+
+  optimizer:
+    learning_rate: 6.25e-6
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0

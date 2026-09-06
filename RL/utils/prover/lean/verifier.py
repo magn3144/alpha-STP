@@ -31,6 +31,12 @@ def extract_invokes(ast_results):
         invokes.add(premise['fullName'])
     return list(invokes)
 
+def extract_leantree_invokes(repl_result):
+    invokes = set()
+    for tactic in repl_result.get('tactics', []):
+        invokes.update(tactic.get('usedConstants', []))
+    return sorted(invokes)
+
 def get_result_from_repl(repl_result, code, duration, phase):
     result = {
         "sorries" : repl_result.get('sorries', []), 
@@ -51,6 +57,36 @@ def get_result_from_repl(repl_result, code, duration, phase):
     result['_verification_calls'] = [{
         'duration_seconds': duration,
         'phase': phase,
+        'status': 'success',
+        'complete': result['complete'],
+    }]
+    return result
+
+def get_result_from_leantree_repl(repl_result, code, duration):
+    result = {
+        'sorries': repl_result.get('sorries', []),
+        'errors': [
+            message
+            for message in repl_result.get('messages', [])
+            if message['severity'] == 'error'
+        ],
+        'warnings': [
+            message
+            for message in repl_result.get('messages', [])
+            if message['severity'] == 'warning'
+        ],
+        'verified_code': code,
+    }
+    result['pass'] = not result['errors']
+    result['complete'] = result['pass'] and not result['sorries'] and not any(
+        "declaration uses 'sorry'" in warning['data']
+        for warning in result['warnings']
+    )
+    result['invokes'] = extract_leantree_invokes(repl_result)
+    result['verify_time'] = duration
+    result['_verification_calls'] = [{
+        'duration_seconds': duration,
+        'phase': 'premises',
         'status': 'success',
         'complete': result['complete'],
     }]
@@ -94,6 +130,30 @@ def start_repl_process(lake_path, lean_workspace, header = None):
             time.sleep(i + 1)
             continue
     raise Exception("Failed to start Lean4 process")
+
+def start_leantree_repl_process(lake_path, lean_workspace, timeout, header=None):
+    proc = subprocess.Popen(
+        [lake_path, 'exe', 'repl'],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        cwd=lean_workspace,
+    )
+    command = {'cmd': header or 'import Mathlib', 'allTactics': False}
+    try:
+        output = query_repl(
+            proc,
+            json.dumps(command, ensure_ascii=False) + '\r\n\r\n',
+            forceTimeout=timeout,
+        )
+        messages = json.loads(output).get('messages', [])
+        if any(message['severity'] == 'error' for message in messages):
+            raise ValueError('DeltaProof Lean header was rejected.')
+    except BaseException:
+        terminate_repl(proc)
+        raise
+    return proc
 
 @func_set_timeout(DEFAULT_TIMEOUT, allowOverride=True)
 def terminate_repl(proc):
@@ -224,6 +284,62 @@ def verify_lean4_file_premises(code, header, lake_path=DEFAULT_LAKE_PATH, lean_w
             }],
         }]
 
+def verify_leantree_files(codes, headers, lake_path, lean_workspace, timeout):
+    results = []
+    proc = None
+    last_header = None
+    try:
+        for code, header in zip(codes, headers):
+            if proc is None or header != last_header:
+                terminate_repl(proc)
+                proc = start_leantree_repl_process(
+                    lake_path,
+                    lean_workspace,
+                    timeout,
+                    header,
+                )
+                last_header = header
+            command = {
+                'cmd': code,
+                'env': 0,
+                'allTactics': True,
+            }
+            started = time.perf_counter()
+            try:
+                output = query_repl(
+                    proc,
+                    json.dumps(command, ensure_ascii=False) + '\r\n\r\n',
+                    forceTimeout=timeout,
+                )
+                duration = time.perf_counter() - started
+                results.append(
+                    get_result_from_leantree_repl(
+                        json.loads(output),
+                        code,
+                        duration,
+                    )
+                )
+            except (Exception, FunctionTimedOut) as error:
+                duration = time.perf_counter() - started
+                status = 'timeout' if isinstance(error, FunctionTimedOut) else 'error'
+                results.append({
+                    'system_messages': str(error),
+                    'complete': False,
+                    'pass': False,
+                    'verify_time': duration,
+                    '_verification_calls': [{
+                        'duration_seconds': duration,
+                        'phase': 'premises',
+                        'status': status,
+                        'complete': False,
+                    }],
+                })
+                terminate_repl(proc)
+                proc = None
+    finally:
+        terminate_repl(proc)
+    return results
+
 @ray.remote(num_cpus=1)
 class Lean4Worker():
     def __init__(self, node, idx, collect_premises=True):
@@ -280,6 +396,35 @@ class Lean4Worker():
 
         return outputs
 
+@ray.remote(num_cpus=1)
+class DeltaLean4Worker():
+    def __init__(self, node, idx, lake_path, lean_workspace, timeout):
+        self.node = node
+        self.idx = idx
+        self.lake_path = lake_path
+        self.lean_workspace = lean_workspace
+        self.timeout = timeout
+        time.sleep(idx * 0.1)
+        print(f'DeltaLean4Worker id={self.idx} node={self.node} started.')
+
+    def run(self, inputs):
+        codes = [
+            test_info['statement'] + '\n' + test_info['proof']
+            for test_info in inputs
+        ]
+        headers = [test_info.get('header', None) for test_info in inputs]
+        results = verify_leantree_files(
+            codes,
+            headers,
+            self.lake_path,
+            self.lean_workspace,
+            self.timeout,
+        )
+        return [
+            test_info | result
+            for test_info, result in zip(inputs, results)
+        ]
+
 def create_ray_lean4_actors(
         reserved_cpus: int = 0, 
         cpus_per_task: float = 4,
@@ -331,4 +476,36 @@ def create_ray_lean4_actors(
             check=True,
         )
     print('Lean4 environment initialized.')
+    return ray_workers
+
+def create_ray_deltaproof_lean_actors(
+        lake_path,
+        lean_workspace,
+        max_workers,
+        timeout,
+):
+    print('Creating DeltaProof Lean workers...')
+    ray_workers = []
+    for i, node in enumerate(ray.nodes()):
+        ip = node['NodeManagerAddress']
+        nr_cpus = min(
+            int(node['Resources']['CPU']),
+            max_workers - len(ray_workers),
+        )
+        if nr_cpus < 1:
+            continue
+        pg = placement_group(
+            [{"CPU": nr_cpus, "node:" + ip: 0.1}],
+            strategy="STRICT_PACK",
+        )
+        ray.get(pg.ready())
+        for j in range(nr_cpus):
+            worker = DeltaLean4Worker.options(
+                placement_group=pg,
+                num_cpus=1,
+            ).remote(i, j, lake_path, lean_workspace, timeout)
+            ray_workers.append(worker)
+    if not ray_workers:
+        raise RuntimeError('No CPU is available for DeltaProof Lean workers.')
+    print(f'Created {len(ray_workers)} DeltaProof Lean workers.')
     return ray_workers
