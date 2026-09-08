@@ -3,8 +3,8 @@
 - [X] Modify code so it runs on GPU
 - [X] Debug code in interactive GPU mode
 - [X] Test which batch size works for SFT run
-- [ ] All hyperparameters should be set in the yaml, not CLI.
-- [ ] Do small SFT training run and save intermediate models
+- [X] All hyperparameters should be set in the yaml, not CLI.
+- [X] Do small SFT training run and save intermediate models
 - [X] Implement timers for STP run for benchmarking
 - [ ] WANDB should track cumulative solve rate during STP
 - [ ] Do small STP training run and save intermediate models

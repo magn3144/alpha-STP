@@ -1,0 +1,46 @@
+experiment:
+  type: sft
+  storage: "${STORAGE}/Conjecturer"
+  base_model: "${STORAGE}/models/deepseek-coder-1.3b-base"
+
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
+
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deepseek-sft-conjecturer
+      tags: [deepseek-ai/deepseek-coder-1.3b-base, sft, conjecturer, A100-80GB]
+
+    seed: 0
+    mp: p=f32,c=bfloat16
+    # Batch 20 at length 2048 completed on a 48GB L40S (job 29315737).
+    train_batch_size: 20
+    # One pass over all 51,273 conjectures, with seven repeated rows for the final batch.
+    num_train_steps: 2564
+    steps_per_eval: 100
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 20
+    per_device_parallelism: 20
+
+  save_freq: 320
+  eval_on_first_step: false
+
+  optimizer:
+    # Same global batch and learning rate as the existing SFT jobs; 10% warmup.
+    learning_rate: 1.0e-5
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    warmup: 256
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0
