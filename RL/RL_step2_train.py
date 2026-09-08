@@ -99,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--sft_dataset", type=str, default=None, help="SFT dataset in the training format")
     parser.add_argument("--save_dir", type=str, default=None)
     parser.add_argument("--conjecturer_only", action='store_true')
+    parser.add_argument("--conjecturer_sft_ratio", type=int)
     parser.add_argument("--model_name", default='RL_model')
     args = parser.parse_args()
     if args.save_dir is None:
@@ -156,6 +157,10 @@ if __name__ == "__main__":
         logging.info('No new conjecturer examples. Keeping the previous checkpoint.')
         preparation_timer.stop('skipped', reason='no_new_conjectures')
         exit(0)
+    if args.conjecturer_only:
+        sft_count = min(len(train_ds), args.conjecturer_sft_ratio * len(new_ds_conjecture))
+        indices = rng.choice(len(train_ds), size=sft_count, replace=False)
+        train_ds = [train_ds[index] for index in indices]
     train_ds += new_ds_conjecture
 
     wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))

@@ -96,6 +96,8 @@ def run_deltaproof_round(
                 '--epoch', experiment['epochs'],
                 '--training_config', config_path,
                 '--sft_dataset', experiment['conjecturer_sft_dataset'],
+                '--conjecturer_sft_ratio', experiment['conjecturer_sft_ratio'],
+                '--seed', round_id,
                 '--conjecturer_only',
                 '--model_name', 'conjecturer_model',
                 dry_run=args.dry_run,

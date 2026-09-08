@@ -98,6 +98,7 @@ DELTAPROOF_RL_SCHEMA = {
         'exp_dir': str,
         'conjecturer_model': str,
         'conjecturer_sft_dataset': str,
+        'conjecturer_sft_ratio': int,
         'dataset_size': int,
         'total_rounds': int,
         'temperature': NUMBER,
@@ -234,6 +235,8 @@ def _validate_ranges(config, kind):
         if kind == 'rl':
             if experiment['solver']['type'] == 'deltaproof':
                 solver = experiment['solver']
+                if experiment['conjecturer_sft_ratio'] < 0:
+                    raise ValueError('experiment.conjecturer_sft_ratio must be nonnegative')
                 positive |= {
                     'experiment.epochs': experiment['epochs'],
                     'experiment.conjecture_multiplier': experiment['conjecture_multiplier'],

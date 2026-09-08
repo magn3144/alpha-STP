@@ -3,6 +3,7 @@ experiment:
   exp_dir: experiments/STP_codet5p_770m_1_8
   conjecturer_model: "${STORAGE}/Conjecturer/SFT/9w7a7leb/step-2563"
   conjecturer_sft_dataset: "${STORAGE}/Conjecturer/data/SFT/train.json"
+  conjecturer_sft_ratio: 5
   dataset_size: 0
   total_rounds: 5
   temperature: 1.0
