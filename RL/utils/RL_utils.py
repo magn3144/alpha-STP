@@ -65,13 +65,13 @@ def collect_trajectories(pool, num_workers, lemmas_to_generate, max_length, seed
         generated_proofs.append(test_info | {'proof': generated_text})
     return generated_proofs
 
-def collect_conjecture(pool, num_workers, lemmas_to_generate, lemma_mapping, max_length, seed, temperature, cache_dir = None):
+def collect_conjecture(pool, num_workers, lemmas_to_generate, lemma_mapping, max_length, seed, temperature, cache_dir = None, progress=None):
     # print all the args for debugging
     logging.debug(f'Start collecting conjecture theorems:')
     logging.debug(f'num_workers = {num_workers}, num_queries: {len(lemmas_to_generate)}, max_length = {max_length}, seed = {seed}, temperature = {temperature}, cache_dir = {cache_dir}')
     prompts = ray_get_prompt(pool, num_workers, lemmas_to_generate, max_length=prompt_length, invoke_type='conjecture')
     # prompts = [get_prompt(test_info, tokenizer, prompt_length, 'conjecture') for test_info in lemmas_to_generate]
-    completions = ray_completion(pool, prompts, num_workers, temperature=temperature, max_tokens=max_length, seed=seed, cache_dir=cache_dir)
+    completions = ray_completion(pool, prompts, num_workers, temperature=temperature, max_tokens=max_length, seed=seed, cache_dir=cache_dir, progress=progress)
     generated_proofs = []
     for output, test_info in zip(completions, lemmas_to_generate):
         statement = 'theorem ' + output['text'].split(END_THM)[0].strip()

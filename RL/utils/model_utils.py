@@ -91,6 +91,7 @@ def ray_completion(
         seed: int = 0,
         logprobs: int = None,
         cache_dir: str = None,
+        progress=None,
 ) -> List[Dict]:
     # Create a unique cache key based on the function's inputs
     cache_key = hashlib.md5(pickle.dumps((prompts, temperature, max_tokens, seed, logprobs))).hexdigest()
@@ -101,6 +102,8 @@ def ray_completion(
     cache_ret = read_file(cache_file_path)
     if cache_ret is not None:
         assert len(cache_ret) == len(prompts), f"len(cache_ret)={len(cache_ret)}, len(prompts)={len(prompts)}"
+        if progress is not None:
+            progress.generation_progress(len(cache_ret), len(prompts))
         return cache_ret
 
     if (cache_file_path_inputs is not None) and (__DEBUG__):
@@ -114,8 +117,11 @@ def ray_completion(
 
     batches = []
     batch_size = (len(prompts) + num_workers - 1) // num_workers
-    for i in range(num_workers):
-        l, r = i * batch_size, min((i + 1) * batch_size, len(prompts))
+    if progress is not None:
+        batch_size = min(batch_size, 32)
+        progress.generation_progress(0, len(prompts))
+    for l in range(0, len(prompts), max(1, batch_size)):
+        r = min(l + batch_size, len(prompts))
         if r > l:
             batch = {'text': [requests[j][0] for j in range(l,r)], 'ids': [requests[j][1] for j in range(l,r)]}
             batches.append(batch)
@@ -125,6 +131,8 @@ def ray_completion(
     results = []
     for _ in range(len(batches)):
         results.extend(pool.get_next_unordered())
+        if progress is not None:
+            progress.generation_progress(len(results), len(prompts))
     # sort results by id
     results = sorted(results, key=lambda x: x["id"])
     assert len(results) == len(prompts), f"len(results)={len(results)}, len(prompts)={len(prompts)}"

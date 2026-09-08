@@ -1,3 +1,4 @@
+import json
 import os
 import shlex
 import subprocess
@@ -16,11 +17,29 @@ def run_python(script, *args, cwd=RL_DIR, env=None, dry_run=False):
         subprocess.run(command, cwd=cwd, env=env, check=True)
 
 
-def run_external_python(python, module, *args, cwd, env=None, dry_run=False):
+def run_external_python(python, module, *args, cwd, env=None, dry_run=False, progress=None):
     command = [str(python), '-u', '-m', module, *(str(arg) for arg in args)]
     print(f'+ {shlex.join(command)}', flush=True)
     if not dry_run:
-        subprocess.run(command, cwd=cwd, env=env, check=True)
+        if progress is None:
+            subprocess.run(command, cwd=cwd, env=env, check=True)
+            return
+        with subprocess.Popen(
+            command, cwd=cwd, env=env, stdout=subprocess.PIPE, text=True,
+        ) as process:
+            try:
+                assert process.stdout is not None
+                for line in process.stdout:
+                    if line.startswith('CONJECTURE_PROGRESS '):
+                        progress.record_result(json.loads(line.removeprefix('CONJECTURE_PROGRESS ')))
+                    else:
+                        print(line, end='', flush=True)
+                returncode = process.wait()
+                if returncode:
+                    raise subprocess.CalledProcessError(returncode, command)
+            except BaseException:
+                process.terminate()
+                raise
 
 
 def levanter_environment():

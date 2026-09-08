@@ -11,6 +11,7 @@ import ray
 from ray.util import ActorPool
 
 from utils.config_utils import load_experiment_config
+from utils.conjecture_metrics import ConjectureMetrics
 from utils.deltaproof_utils import (
     apply_results,
     build_requests,
@@ -45,7 +46,7 @@ from utils.timing_utils import configure_timing, timer
 MAX_LENGTH = 1024
 
 
-def generate_conjectures(sampler, model, dataset, target, config, round_dir, seed):
+def generate_conjectures(sampler, model, dataset, target, config, round_dir, seed, progress):
     experiment = config['experiment']
     solver = experiment['solver']
     inputs = select_conjecture_inputs(sampler, target, seed)
@@ -71,14 +72,16 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         seed,
         experiment['temperature'],
         cache_dir=os.path.join(round_dir, 'sampler_ckpt'),
+        progress=progress,
     )
     for actor in actors:
         ray.kill(actor)
-    candidates = deduplicate_conjectures(
+    distinct = deduplicate_conjectures(
         candidates,
         dataset,
         known_statements,
     )
+    progress.set_candidates(candidates, distinct)
 
     workers = create_ray_deltaproof_lean_actors(
         solver['lake_path'],
@@ -87,7 +90,7 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         solver['final_check_timeout'],
     )
     pool = ActorPool(workers)
-    validation_inputs = [candidate | {'proof': ' sorry'} for candidate in candidates]
+    validation_inputs = [candidate | {'proof': ' sorry'} for candidate in distinct]
     blocks = [
         validation_inputs[index:index + TEST_BATCH_SIZE]
         for index in range(0, len(validation_inputs), TEST_BATCH_SIZE)
@@ -96,11 +99,11 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         lambda actor, block: actor.run.remote(block),
         blocks,
     )
-    validation_results = [
-        result
-        for _ in blocks
-        for result in pool.get_next_unordered()
-    ]
+    validation_results = []
+    for _ in blocks:
+        results = pool.get_next_unordered()
+        validation_results.extend(results)
+        progress.validation_progress(results)
     for worker in workers:
         ray.kill(worker)
     valid = [result for result in validation_results if result.get('pass', False)]
@@ -111,6 +114,7 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         )
     valid.sort(key=lambda result: result['lemma_id'])
     np.random.default_rng(seed).shuffle(valid)
+    progress.select(valid[:target])
     return valid[:target]
 
 
@@ -176,7 +180,7 @@ def filter_conjecture_examples(sampler, examples, dataset, model, round_dir, see
     return filtered
 
 
-def save_round(round_dir, sampler, round_id, requests, results):
+def save_round(round_dir, sampler, round_id, requests, results, progress):
     write_data(
         json.dumps([
             test_info
@@ -206,6 +210,7 @@ def save_round(round_dir, sampler, round_id, requests, results):
     }
     metrics = {
         'round': round_id,
+        'status': 'complete',
         'attempts': len(requests),
         'dataset_attempts': sum(item['source'] == 'dataset' for item in requests),
         'conjecture_attempts': sum(
@@ -216,7 +221,8 @@ def save_round(round_dir, sampler, round_id, requests, results):
             result['source'] == 'dataset' and result['status'] == 'proved'
             for result in results
         ),
-        'conjectures_generated': len(conjecture_ids),
+        'conjectures_generated': progress.metrics['generated'],
+        'conjectures_selected': len(conjecture_ids),
         'conjecture_attempts_solved': sum(
             result['source'] == 'conjecture' and result['status'] == 'proved'
             for result in results
@@ -233,12 +239,8 @@ def save_round(round_dir, sampler, round_id, requests, results):
         'dataset_remaining': len(sampler.relevant_lemmas) - cumulative_dataset_solved,
         'conjecture_training_examples': len(sampler.valid_conjecture_examples),
     }
-    write_data(
-        json.dumps(metrics, indent=2),
-        os.path.join(round_dir, 'round_metrics.json'),
-        'json',
-        no_compression=True,
-    )
+    progress.metrics['training_examples'] = len(sampler.valid_conjecture_examples)
+    progress.save(metrics)
     write_data(
         pickle.dumps(sampler.to_dict()),
         os.path.join(round_dir, 'sampler.pkl'),
@@ -254,16 +256,28 @@ def main(args):
         force=True,
     )
     config = load_experiment_config(args.config, 'rl')
-    experiment = config['experiment']
-    solver = experiment['solver']
     round_dir = os.path.abspath(args.exp_dir)
-    round_id = int(Path(round_dir).name.removeprefix('round'))
-    configure_timing(round_dir, round_id=round_id)
-    results_path = os.path.join(round_dir, 'deltaproof_results.jsonl')
     if path_exists(os.path.join(round_dir, 'generation_complete')):
         logging.warning('Round generation is already complete. Exiting.')
         return
     os.makedirs(round_dir, exist_ok=True)
+    progress = ConjectureMetrics(config, round_dir, args.model)
+    try:
+        run_round(args, config, round_dir, progress)
+    except BaseException:
+        progress.save({'round': progress.round_id, 'status': 'failed'})
+        progress.run.finish(exit_code=1, quiet=True)
+        raise
+    else:
+        progress.run.finish(quiet=True)
+
+
+def run_round(args, config, round_dir, progress):
+    experiment = config['experiment']
+    solver = experiment['solver']
+    round_id = progress.round_id
+    configure_timing(round_dir, round_id=round_id)
+    results_path = os.path.join(round_dir, 'deltaproof_results.jsonl')
 
     dataset = load_deltaproof_dataset(
         solver['dataset_path'],
@@ -278,7 +292,7 @@ def main(args):
             f'round{round_id - 1}',
         )
         sampler_data = read_file(os.path.join(previous_dir, 'sampler.pkl'))
-        assert sampler_data is not None
+        assert isinstance(sampler_data, dict)
         sampler = Sampler_base.from_dict(sampler_data)
         for test_info in dataset:
             insert_lemma(sampler.lemma_mapping, test_info)
@@ -302,6 +316,7 @@ def main(args):
                 config,
                 round_dir,
                 args.seed,
+                progress,
             )
         ray.shutdown()
         gc.collect()
@@ -314,6 +329,7 @@ def main(args):
     )
     if not dataset_theorems:
         logging.info('All dataset theorems are solved.')
+        progress.save({'round': round_id, 'status': 'experiment_complete'})
         Path(round_dir, 'experiment_complete').touch()
         return
     requests, test_infos = build_requests(
@@ -333,6 +349,7 @@ def main(args):
     run_dir = Path(experiment['exp_dir']) / 'deltaproof'
     if not (run_dir / 'checkpoints' / 'latest.pt').is_file():
         run_dir = Path(solver['sft_run_dir'])
+    progress.set_requests(requests, run_dir)
     inference_args = [
         '--config', Path(args.config).resolve(),
         '--input', requests_path,
@@ -351,6 +368,7 @@ def main(args):
         '--inference-batch-size', solver['inference_batch_size'],
         '--inference-batch-timeout', solver['inference_batch_timeout'],
         '--seed', args.seed,
+        '--report-progress',
     ]
     for lean_import in solver['imports']:
         inference_args.extend(['--import', lean_import])
@@ -361,6 +379,7 @@ def main(args):
                 'alphaproof.inference.infer',
                 *inference_args,
                 cwd=solver['repo_dir'],
+                progress=progress,
             )
 
     results = read_jsonl(results_path)
@@ -397,6 +416,9 @@ def main(args):
     rejected = [result for result in results if result['status'] == 'rejected']
     if rejected:
         raise ValueError(f'DeltaProof rejected {len(rejected)} scheduled theorems.')
+    for result in results:
+        progress.record_result(result)
+    progress.log(force=True)
     generated_proofs = apply_results(results, test_infos)
 
     init_ray_cluster()
@@ -434,6 +456,7 @@ def main(args):
         round_id,
         requests,
         results,
+        progress,
     )
 
 
