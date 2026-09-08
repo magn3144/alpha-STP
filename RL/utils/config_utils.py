@@ -92,6 +92,7 @@ RL_SCHEMA = {
 }
 
 DELTAPROOF_RL_SCHEMA = {
+    'deltaproof': dict,
     'experiment': {
         'type': str,
         'exp_dir': str,
@@ -107,9 +108,7 @@ DELTAPROOF_RL_SCHEMA = {
             'type': str,
             'repo_dir': str,
             'python': str,
-            'config': str,
             'sft_run_dir': str,
-            'run_dir': str,
             'dataset_path': str,
             'lean_project': str,
             'lake_path': str,
@@ -346,6 +345,9 @@ def load_experiment_config(path, kind=None):
     ):
         schemas['rl'] = DELTAPROOF_RL_SCHEMA
     _validate(config, schemas[kind], kind)
+    if kind == 'rl' and config['experiment']['solver']['type'] == 'deltaproof':
+        exp_dir = Path(config['experiment']['exp_dir'])
+        config['experiment']['exp_dir'] = str((REPO_DIR / exp_dir).resolve())
     _validate_ranges(config, kind)
     if kind != 'sft' and 'dataset_config' in config['experiment']:
         dataset_config = Path(config['experiment']['dataset_config'])

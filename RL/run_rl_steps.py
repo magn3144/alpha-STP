@@ -79,8 +79,8 @@ def run_deltaproof_round(
         run_external_python(
             solver['python'],
             'alphaproof.training.train_transitions',
-            '--config', solver['config'],
-            '--run-dir', solver['run_dir'],
+            '--config', config_path,
+            '--run-dir', exp_dir / 'deltaproof',
             '--input', transitions_path,
             '--batch-id', f'round{round_id}',
             '--num-steps', solver['learner_steps_per_round'],

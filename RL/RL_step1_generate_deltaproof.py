@@ -330,10 +330,11 @@ def main(args):
     else:
         write_jsonl(requests_path, requests)
 
-    run_dir = Path(solver['run_dir'])
+    run_dir = Path(experiment['exp_dir']) / 'deltaproof'
     if not (run_dir / 'checkpoints' / 'latest.pt').is_file():
         run_dir = Path(solver['sft_run_dir'])
     inference_args = [
+        '--config', Path(args.config).resolve(),
         '--input', requests_path,
         '--output', results_path,
         '--transitions-output', transitions_path,
