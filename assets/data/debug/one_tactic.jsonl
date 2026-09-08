@@ -1,0 +1,32 @@
+{"id": "debug_one_tactic_00", "theorem": "theorem debug_one_tactic_00 (n : Nat) : n = n := by sorry", "proof": "rfl"}
+{"id": "debug_one_tactic_01", "theorem": "theorem debug_one_tactic_01 (n : Nat) : n + 0 = n := by sorry", "proof": "rfl"}
+{"id": "debug_one_tactic_02", "theorem": "theorem debug_one_tactic_02 (n : Nat) : n * 0 = 0 := by sorry", "proof": "rfl"}
+{"id": "debug_one_tactic_03", "theorem": "theorem debug_one_tactic_03 (n : Nat) : n + 1 = Nat.succ n := by sorry", "proof": "rfl"}
+{"id": "debug_one_tactic_04", "theorem": "theorem debug_one_tactic_04 (n : Nat) : (n, 0).1 = n := by sorry", "proof": "rfl"}
+{"id": "debug_one_tactic_05", "theorem": "theorem debug_one_tactic_05 (n : Nat) : (0, n).2 = n := by sorry", "proof": "rfl"}
+{"id": "debug_one_tactic_06", "theorem": "theorem debug_one_tactic_06 (n : Nat) : (fun x : Nat => x) n = n := by sorry", "proof": "rfl"}
+{"id": "debug_one_tactic_07", "theorem": "theorem debug_one_tactic_07 (n : Nat) : [n].length = 1 := by sorry", "proof": "rfl"}
+{"id": "debug_one_tactic_08", "theorem": "theorem debug_one_tactic_08 (P : Prop) (h : P) : P := by sorry", "proof": "exact h"}
+{"id": "debug_one_tactic_09", "theorem": "theorem debug_one_tactic_09 (n : Nat) (h : n = 0) : n = 0 := by sorry", "proof": "exact h"}
+{"id": "debug_one_tactic_10", "theorem": "theorem debug_one_tactic_10 (n : Nat) (h : n = 1) : n = 1 := by sorry", "proof": "exact h"}
+{"id": "debug_one_tactic_11", "theorem": "theorem debug_one_tactic_11 (n m : Nat) (h : n = m) : n = m := by sorry", "proof": "exact h"}
+{"id": "debug_one_tactic_12", "theorem": "theorem debug_one_tactic_12 (n m : Nat) (h : n < m) : n < m := by sorry", "proof": "exact h"}
+{"id": "debug_one_tactic_13", "theorem": "theorem debug_one_tactic_13 (n m : Nat) (h : n ≤ m) : n ≤ m := by sorry", "proof": "exact h"}
+{"id": "debug_one_tactic_14", "theorem": "theorem debug_one_tactic_14 (P Q : Prop) (h : P ∧ Q) : P ∧ Q := by sorry", "proof": "exact h"}
+{"id": "debug_one_tactic_15", "theorem": "theorem debug_one_tactic_15 (P Q : Prop) (h : P ∨ Q) : P ∨ Q := by sorry", "proof": "exact h"}
+{"id": "debug_one_tactic_16", "theorem": "theorem debug_one_tactic_16 : (1 : Nat) < 2 := by sorry", "proof": "decide"}
+{"id": "debug_one_tactic_17", "theorem": "theorem debug_one_tactic_17 : (2 : Nat) < 3 := by sorry", "proof": "decide"}
+{"id": "debug_one_tactic_18", "theorem": "theorem debug_one_tactic_18 : (0 : Nat) ≤ 1 := by sorry", "proof": "decide"}
+{"id": "debug_one_tactic_19", "theorem": "theorem debug_one_tactic_19 : (3 : Nat) ≤ 3 := by sorry", "proof": "decide"}
+{"id": "debug_one_tactic_20", "theorem": "theorem debug_one_tactic_20 : (0 : Nat) ≠ 1 := by sorry", "proof": "decide"}
+{"id": "debug_one_tactic_21", "theorem": "theorem debug_one_tactic_21 : (2 : Nat) ≠ 3 := by sorry", "proof": "decide"}
+{"id": "debug_one_tactic_22", "theorem": "theorem debug_one_tactic_22 : (1 : Nat) + 1 = 2 := by sorry", "proof": "decide"}
+{"id": "debug_one_tactic_23", "theorem": "theorem debug_one_tactic_23 : (2 : Nat) * 3 = 6 := by sorry", "proof": "decide"}
+{"id": "debug_one_tactic_24", "theorem": "theorem debug_one_tactic_24 (n : Nat) : 0 + n = n := by sorry", "proof": "simp"}
+{"id": "debug_one_tactic_25", "theorem": "theorem debug_one_tactic_25 (n : Nat) : 0 * n = 0 := by sorry", "proof": "simp"}
+{"id": "debug_one_tactic_26", "theorem": "theorem debug_one_tactic_26 (n : Nat) : n * 1 = n := by sorry", "proof": "simp"}
+{"id": "debug_one_tactic_27", "theorem": "theorem debug_one_tactic_27 (n : Nat) : 1 * n = n := by sorry", "proof": "simp"}
+{"id": "debug_one_tactic_28", "theorem": "theorem debug_one_tactic_28 (n : Nat) : n - n = 0 := by sorry", "proof": "simp"}
+{"id": "debug_one_tactic_29", "theorem": "theorem debug_one_tactic_29 (n : Nat) : n ≤ n := by sorry", "proof": "simp"}
+{"id": "debug_one_tactic_30", "theorem": "theorem debug_one_tactic_30 (P : Prop) : P ∧ True ↔ P := by sorry", "proof": "simp"}
+{"id": "debug_one_tactic_31", "theorem": "theorem debug_one_tactic_31 (P : Prop) : P ∨ False ↔ P := by sorry", "proof": "simp"}

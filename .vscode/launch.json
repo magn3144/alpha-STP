@@ -17,6 +17,17 @@
             ],
             "justMyCode": false,
             "subProcess": true
+        },
+        {
+            "name": "Attach: STP AlphaProof a100sh GPU 1",
+            "type": "debugpy",
+            "request": "attach",
+            "connect": {
+                "host": "n-62-12-19",
+                "port": 5678
+            },
+            "justMyCode": false,
+            "subProcess": true
         }
     ]
 }
