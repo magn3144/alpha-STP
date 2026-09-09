@@ -180,3 +180,5 @@ storage/
 *.out
 wandb/
 /experiments/
+
+.DS_Store
