@@ -17,6 +17,6 @@
 # Design Choices
 
 - Adapted to run on GPUs instead of TPUs
-- In the original code the pass rate to train the conjecturer on a conjecture is 0 < pass < 0.25. I changed it to 0 < pass <= 0.25
+- In the original code the pass rate to train the conjecturer on a conjecture is 0 < pass < 0.25. I changed it to 0 < pass <= 0.25. Interestingly in the paper its 0 < pass <= 0.25.
 - Since we use a much smaller global batch size we used square root scaling to find an appropriate learning rate. Warmup steps were scaled as a fraction of optimizer steps.
 - conjecturer_sft_ratio was added to limit the ratio of sft samples to new generated conjecturer samples in a STP round.

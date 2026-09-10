@@ -6,7 +6,7 @@ experiment:
   conjecturer_sft_dataset: "${STORAGE}/Conjecturer/data/SFT/train.json"
   conjecturer_sft_ratio: 5
   dataset_size: 0
-  total_rounds: 5
+  total_rounds: 10
   temperature: 1.0
   epochs: 1
   sampler: Sampler_base
@@ -18,10 +18,10 @@ experiment:
     lean_project: "${DELTA_PROOF}/lean_project"
     lake_path: "${HOME}/.elan/bin/lake"
     imports: [Mathlib]
-    attempts_per_round: 9600
+    attempts_per_round: 4800
     conjecture_attempts: 16
     conjecture_fraction: 0.5
-    learner_steps_per_round: 2000
+    learner_steps_per_round: 1000
 
 training:
   max_tune_length: 2048
