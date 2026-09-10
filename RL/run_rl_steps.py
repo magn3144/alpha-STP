@@ -6,12 +6,12 @@ from utils.experiment_utils import RL_DIR, run_external_python, run_python
 from utils.timing_utils import configure_timing, timer
 
 
-def latest_conjecturer(experiment, exp_dir, round_id):
+def latest_conjecturer(deltaproof, exp_dir, round_id):
     for previous_round in range(round_id - 1, -1, -1):
         checkpoint = exp_dir / f'round{previous_round}' / 'conjecturer_model'
         if checkpoint.is_dir():
             return checkpoint
-    return experiment['conjecturer_model']
+    return deltaproof['conjecturer_model']
 
 
 def run_llm_round(
@@ -63,7 +63,7 @@ def run_deltaproof_round(
     round_dir,
 ):
     deltaproof = experiment['deltaproof']
-    model = latest_conjecturer(experiment, exp_dir, round_id)
+    model = latest_conjecturer(deltaproof, exp_dir, round_id)
     with timer('generation_step', round=round_id):
         run_python(
             RL_DIR / 'RL_step1_generate_deltaproof.py',
@@ -94,10 +94,10 @@ def run_deltaproof_round(
                 RL_DIR / 'RL_step2_train.py',
                 '--base_model', model,
                 '--exp_dir', round_dir,
-                '--epoch', experiment['epochs'],
+                '--epoch', deltaproof['conjecturer_epochs'],
                 '--training_config', config_path,
-                '--sft_dataset', experiment['conjecturer_sft_dataset'],
-                '--conjecturer_sft_ratio', experiment['conjecturer_sft_ratio'],
+                '--sft_dataset', deltaproof['conjecturer_sft_dataset'],
+                '--conjecturer_sft_ratio', deltaproof['conjecturer_sft_ratio'],
                 '--seed', round_id,
                 '--conjecturer_only',
                 '--model_name', 'conjecturer_model',

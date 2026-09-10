@@ -60,7 +60,7 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         model,
         model,
         enable_prefix_caching=False,
-        gpu_memory_utilization=experiment['vllm_gpu_memory_utilization'],
+        gpu_memory_utilization=deltaproof['vllm_gpu_memory_utilization'],
     )
     pool = ActorPool(actors)
     multiplier = experiment['conjecture_multiplier']
@@ -72,7 +72,7 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         sampler.lemma_mapping,
         MAX_LENGTH,
         seed,
-        experiment['temperature'],
+        deltaproof['conjecturer_temperature'],
         cache_dir=os.path.join(round_dir, 'sampler_ckpt'),
         progress=progress,
     )

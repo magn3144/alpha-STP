@@ -35,6 +35,7 @@ TRAINER_SCHEMA = {
     'mp': str,
     'train_batch_size': int,
     'steps_per_eval': int,
+    'model_axis_size': int,
     'tensor_parallel_axes': [str],
     'per_device_eval_parallelism': int,
     'per_device_parallelism': int,
@@ -95,17 +96,16 @@ DELTAPROOF_RL_SCHEMA = {
     'experiment': {
         'type': str,
         'exp_dir': str,
-        'conjecturer_model': str,
-        'vllm_gpu_memory_utilization': NUMBER,
-        'conjecturer_sft_dataset': str,
-        'conjecturer_sft_ratio': int,
         'dataset_size': int,
         'total_rounds': int,
-        'temperature': NUMBER,
-        'epochs': int,
-        'sampler': str,
         'conjecture_multiplier': int,
         'deltaproof': {
+            'conjecturer_model': str,
+            'vllm_gpu_memory_utilization': NUMBER,
+            'conjecturer_sft_dataset': str,
+            'conjecturer_sft_ratio': int,
+            'conjecturer_temperature': NUMBER,
+            'conjecturer_epochs': int,
             'repo_dir': str,
             'python': str,
             'dataset_path': str,
@@ -205,6 +205,7 @@ def _validate_ranges(config, kind):
             'training.max_tune_length': training['max_tune_length'],
             'training.trainer.train_batch_size': trainer['train_batch_size'],
             'training.trainer.steps_per_eval': trainer['steps_per_eval'],
+            'training.trainer.model_axis_size': trainer['model_axis_size'],
             'training.trainer.per_device_eval_parallelism': trainer['per_device_eval_parallelism'],
             'training.trainer.per_device_parallelism': trainer['per_device_parallelism'],
             'training.optimizer.learning_rate': optimizer['learning_rate'],
@@ -220,17 +221,15 @@ def _validate_ranges(config, kind):
         experiment = config['experiment']
         positive['experiment.total_rounds'] = experiment['total_rounds']
         if kind == 'rl':
-            positive |= {
-                'experiment.epochs': experiment['epochs'],
-                'experiment.conjecture_multiplier': experiment['conjecture_multiplier'],
-            }
+            positive['experiment.conjecture_multiplier'] = experiment['conjecture_multiplier']
             if 'deltaproof' in experiment:
                 deltaproof = experiment['deltaproof']
-                if not 0 < experiment['vllm_gpu_memory_utilization'] <= 1:
-                    raise ValueError('experiment.vllm_gpu_memory_utilization must be in (0, 1]')
-                if experiment['conjecturer_sft_ratio'] < 0:
-                    raise ValueError('experiment.conjecturer_sft_ratio must be nonnegative')
+                if not 0 < deltaproof['vllm_gpu_memory_utilization'] <= 1:
+                    raise ValueError('experiment.deltaproof.vllm_gpu_memory_utilization must be in (0, 1]')
+                if deltaproof['conjecturer_sft_ratio'] < 0:
+                    raise ValueError('experiment.deltaproof.conjecturer_sft_ratio must be nonnegative')
                 positive |= {
+                    'experiment.deltaproof.conjecturer_epochs': deltaproof['conjecturer_epochs'],
                     'experiment.deltaproof.attempts_per_round': deltaproof['attempts_per_round'],
                     'experiment.deltaproof.conjecture_attempts': deltaproof['conjecture_attempts'],
                     'experiment.deltaproof.learner_steps_per_round': deltaproof['learner_steps_per_round'],
@@ -249,6 +248,7 @@ def _validate_ranges(config, kind):
                         'by twice conjecture_attempts'
                     )
             else:
+                positive['experiment.epochs'] = experiment['epochs']
                 samples = experiment['llm']['samples_per_statement']
                 positive |= {
                     'experiment.llm.samples_per_statement.first_round': samples['first_round'],
@@ -289,14 +289,21 @@ def _validate_ranges(config, kind):
         raise ValueError('training.save_freq must be less than trainer.num_train_steps')
     if kind != 'sft' and config['experiment']['dataset_size'] < 0:
         raise ValueError('experiment.dataset_size must be nonnegative')
-    if kind != 'sft' and config['experiment']['temperature'] < 0:
+    if kind == 'rl' and 'deltaproof' in config['experiment']:
+        if config['experiment']['deltaproof']['conjecturer_temperature'] < 0:
+            raise ValueError('experiment.deltaproof.conjecturer_temperature must be nonnegative')
+    elif kind != 'sft' and config['experiment']['temperature'] < 0:
         raise ValueError('experiment.temperature must be nonnegative')
     expected_samplers = {
         'rl': 'Sampler_base',
         'expert_iteration': 'Sampler_naive',
         'parallel_sampling': 'Sampler_naive',
     }
-    if kind in expected_samplers and config['experiment']['sampler'] != expected_samplers[kind]:
+    if (
+        kind in expected_samplers
+        and 'sampler' in config['experiment']
+        and config['experiment']['sampler'] != expected_samplers[kind]
+    ):
         raise ValueError(f'experiment.sampler must be {expected_samplers[kind]}')
 
 
