@@ -72,20 +72,19 @@ RL_SCHEMA = {
     'experiment': {
         'type': str,
         'exp_dir': str,
-        'base_model': str,
-        'dataset_config': str,
         'dataset_size': int,
         'total_rounds': int,
-        'samples_per_statement': {
-            'first_round': int,
-            'later_rounds': int,
-        },
         'temperature': NUMBER,
         'epochs': int,
         'sampler': str,
         'conjecture_multiplier': int,
-        'solver': {
-            'type': str,
+        'llm': {
+            'base_model': str,
+            'dataset_config': str,
+            'samples_per_statement': {
+                'first_round': int,
+                'later_rounds': int,
+            },
         },
     },
     'training': TRAINING_SCHEMA,
@@ -106,11 +105,9 @@ DELTAPROOF_RL_SCHEMA = {
         'epochs': int,
         'sampler': str,
         'conjecture_multiplier': int,
-        'solver': {
-            'type': str,
+        'deltaproof': {
             'repo_dir': str,
             'python': str,
-            'sft_run_dir': str,
             'dataset_path': str,
             'lean_project': str,
             'lake_path': str,
@@ -119,15 +116,6 @@ DELTAPROOF_RL_SCHEMA = {
             'conjecture_attempts': int,
             'conjecture_fraction': NUMBER,
             'learner_steps_per_round': int,
-            'num_simulations': int,
-            'num_sampled_actions': int,
-            'tactic_timeout': NUMBER,
-            'final_check_timeout': NUMBER,
-            'parallel_searches': int,
-            'max_concurrent_lean_imports': int,
-            'inference_num_gpus': int,
-            'inference_batch_size': int,
-            'inference_batch_timeout': NUMBER,
         },
     },
     'training': TRAINING_SCHEMA,
@@ -230,54 +218,41 @@ def _validate_ranges(config, kind):
 
     if kind != 'sft':
         experiment = config['experiment']
-        positive |= {
-            'experiment.total_rounds': experiment['total_rounds'],
-        }
+        positive['experiment.total_rounds'] = experiment['total_rounds']
         if kind == 'rl':
-            if experiment['solver']['type'] == 'deltaproof':
-                solver = experiment['solver']
+            positive |= {
+                'experiment.epochs': experiment['epochs'],
+                'experiment.conjecture_multiplier': experiment['conjecture_multiplier'],
+            }
+            if 'deltaproof' in experiment:
+                deltaproof = experiment['deltaproof']
                 if not 0 < experiment['vllm_gpu_memory_utilization'] <= 1:
                     raise ValueError('experiment.vllm_gpu_memory_utilization must be in (0, 1]')
                 if experiment['conjecturer_sft_ratio'] < 0:
                     raise ValueError('experiment.conjecturer_sft_ratio must be nonnegative')
                 positive |= {
-                    'experiment.epochs': experiment['epochs'],
-                    'experiment.conjecture_multiplier': experiment['conjecture_multiplier'],
-                    'experiment.solver.attempts_per_round': solver['attempts_per_round'],
-                    'experiment.solver.conjecture_attempts': solver['conjecture_attempts'],
-                    'experiment.solver.learner_steps_per_round': solver['learner_steps_per_round'],
-                    'experiment.solver.num_simulations': solver['num_simulations'],
-                    'experiment.solver.num_sampled_actions': solver['num_sampled_actions'],
-                    'experiment.solver.tactic_timeout': solver['tactic_timeout'],
-                    'experiment.solver.final_check_timeout': solver['final_check_timeout'],
-                    'experiment.solver.parallel_searches': solver['parallel_searches'],
-                    'experiment.solver.max_concurrent_lean_imports': solver['max_concurrent_lean_imports'],
-                    'experiment.solver.inference_num_gpus': solver['inference_num_gpus'],
-                    'experiment.solver.inference_batch_size': solver['inference_batch_size'],
+                    'experiment.deltaproof.attempts_per_round': deltaproof['attempts_per_round'],
+                    'experiment.deltaproof.conjecture_attempts': deltaproof['conjecture_attempts'],
+                    'experiment.deltaproof.learner_steps_per_round': deltaproof['learner_steps_per_round'],
                 }
-                if solver['inference_batch_timeout'] < 0:
+                if deltaproof['conjecture_fraction'] not in (0, 0.5):
                     raise ValueError(
-                        'experiment.solver.inference_batch_timeout must be nonnegative'
+                        'experiment.deltaproof.conjecture_fraction must be 0 or 0.5'
                     )
-                if solver['conjecture_fraction'] not in (0, 0.5):
-                    raise ValueError(
-                        'experiment.solver.conjecture_fraction must be 0 or 0.5'
-                    )
-                divisor = 2 * solver['conjecture_attempts']
+                divisor = 2 * deltaproof['conjecture_attempts']
                 if (
-                    solver['conjecture_fraction'] == 0.5
-                    and solver['attempts_per_round'] % divisor != 0
+                    deltaproof['conjecture_fraction'] == 0.5
+                    and deltaproof['attempts_per_round'] % divisor != 0
                 ):
                     raise ValueError(
-                        'experiment.solver.attempts_per_round must be divisible '
+                        'experiment.deltaproof.attempts_per_round must be divisible '
                         'by twice conjecture_attempts'
                     )
             else:
+                samples = experiment['llm']['samples_per_statement']
                 positive |= {
-                    'experiment.samples_per_statement.first_round': experiment['samples_per_statement']['first_round'],
-                    'experiment.samples_per_statement.later_rounds': experiment['samples_per_statement']['later_rounds'],
-                    'experiment.epochs': experiment['epochs'],
-                    'experiment.conjecture_multiplier': experiment['conjecture_multiplier'],
+                    'experiment.llm.samples_per_statement.first_round': samples['first_round'],
+                    'experiment.llm.samples_per_statement.later_rounds': samples['later_rounds'],
                 }
         else:
             positive['experiment.samples_per_statement'] = experiment['samples_per_statement']
@@ -323,8 +298,6 @@ def _validate_ranges(config, kind):
     }
     if kind in expected_samplers and config['experiment']['sampler'] != expected_samplers[kind]:
         raise ValueError(f'experiment.sampler must be {expected_samplers[kind]}')
-    if kind == 'rl' and config['experiment']['solver']['type'] not in ('llm', 'deltaproof'):
-        raise ValueError('experiment.solver.type must be llm or deltaproof')
 
 
 def load_experiment_config(path, kind=None):
@@ -345,17 +318,23 @@ def load_experiment_config(path, kind=None):
     kind = config_kind
     if kind not in schemas:
         raise ValueError(f'Unknown experiment kind: {kind}')
-    if (
-        kind == 'rl'
-        and config.get('experiment', {}).get('solver', {}).get('type') == 'deltaproof'
-    ):
-        schemas['rl'] = DELTAPROOF_RL_SCHEMA
+    if kind == 'rl':
+        experiment = config.get('experiment', {})
+        solver_keys = {'llm', 'deltaproof'}.intersection(experiment)
+        if len(solver_keys) != 1:
+            raise ValueError('experiment must contain exactly one of llm or deltaproof')
+        if 'deltaproof' in solver_keys:
+            schemas['rl'] = DELTAPROOF_RL_SCHEMA
     _validate(config, schemas[kind], kind)
-    if kind == 'rl' and config['experiment']['solver']['type'] == 'deltaproof':
+    if kind == 'rl' and 'deltaproof' in config['experiment']:
         exp_dir = Path(config['experiment']['exp_dir'])
         config['experiment']['exp_dir'] = str((REPO_DIR / exp_dir).resolve())
     _validate_ranges(config, kind)
-    if kind != 'sft' and 'dataset_config' in config['experiment']:
+    if kind == 'rl' and 'llm' in config['experiment']:
+        dataset_config = Path(config['experiment']['llm']['dataset_config'])
+        if not dataset_config.is_absolute():
+            config['experiment']['llm']['dataset_config'] = str(REPO_DIR / dataset_config)
+    elif kind != 'sft' and 'dataset_config' in config['experiment']:
         dataset_config = Path(config['experiment']['dataset_config'])
         if not dataset_config.is_absolute():
             config['experiment']['dataset_config'] = str(REPO_DIR / dataset_config)

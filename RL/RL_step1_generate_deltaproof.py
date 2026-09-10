@@ -48,7 +48,8 @@ MAX_LENGTH = 1024
 
 def generate_conjectures(sampler, model, dataset, target, config, round_dir, seed, progress):
     experiment = config['experiment']
-    solver = experiment['solver']
+    deltaproof = experiment['deltaproof']
+    rl = config['deltaproof']['rl']
     inputs = select_conjecture_inputs(sampler, target, seed)
     if len(inputs) < target:
         raise ValueError(
@@ -85,10 +86,10 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
     progress.set_candidates(candidates, distinct)
 
     workers = create_ray_deltaproof_lean_actors(
-        solver['lake_path'],
-        solver['lean_project'],
-        solver['max_concurrent_lean_imports'],
-        solver['final_check_timeout'],
+        deltaproof['lake_path'],
+        deltaproof['lean_project'],
+        rl['max_concurrent_lean_imports'],
+        rl['final_check_timeout'],
     )
     pool = ActorPool(workers)
     validation_inputs = [candidate | {'proof': ' sorry'} for candidate in distinct]
@@ -119,7 +120,7 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
     return valid[:target]
 
 
-def collect_premises(generated_proofs, solver):
+def collect_premises(generated_proofs, deltaproof, rl):
     successful = [
         test_info
         for test_info in generated_proofs
@@ -128,10 +129,10 @@ def collect_premises(generated_proofs, solver):
     if not successful:
         return generated_proofs
     workers = create_ray_deltaproof_lean_actors(
-        solver['lake_path'],
-        solver['lean_project'],
-        solver['max_concurrent_lean_imports'],
-        solver['final_check_timeout'],
+        deltaproof['lake_path'],
+        deltaproof['lean_project'],
+        rl['max_concurrent_lean_imports'],
+        rl['final_check_timeout'],
     )
     pool = ActorPool(workers)
     blocks = [
@@ -275,13 +276,14 @@ def main(args):
 
 def run_round(args, config, round_dir, progress):
     experiment = config['experiment']
-    solver = experiment['solver']
+    deltaproof = experiment['deltaproof']
+    rl = config['deltaproof']['rl']
     round_id = progress.round_id
     configure_timing(round_dir, round_id=round_id)
     results_path = os.path.join(round_dir, 'deltaproof_results.jsonl')
 
     dataset = load_deltaproof_dataset(
-        solver['dataset_path'],
+        deltaproof['dataset_path'],
         experiment['dataset_size'],
     )
     if round_id == 0:
@@ -298,14 +300,14 @@ def run_round(args, config, round_dir, progress):
         for test_info in dataset:
             insert_lemma(sampler.lemma_mapping, test_info)
 
-    attempts = solver['attempts_per_round']
+    attempts = deltaproof['attempts_per_round']
     conjectures = []
-    if round_id == 0 or solver['conjecture_fraction'] == 0:
+    if round_id == 0 or deltaproof['conjecture_fraction'] == 0:
         dataset_attempts = attempts
     else:
         dataset_attempts = attempts // 2
         conjecture_target = (
-            attempts // 2 // solver['conjecture_attempts']
+            attempts // 2 // deltaproof['conjecture_attempts']
         )
         init_ray_cluster()
         with timer('conjecture_generation'):
@@ -336,7 +338,7 @@ def run_round(args, config, round_dir, progress):
     requests, test_infos = build_requests(
         dataset_theorems,
         conjectures,
-        solver['conjecture_attempts'],
+        deltaproof['conjecture_attempts'],
         round_id,
     )
     requests_path = os.path.join(round_dir, 'deltaproof_requests.jsonl')
@@ -349,7 +351,7 @@ def run_round(args, config, round_dir, progress):
 
     run_dir = Path(experiment['exp_dir']) / 'deltaproof'
     if not (run_dir / 'checkpoints' / 'latest.pt').is_file():
-        run_dir = Path(solver['sft_run_dir'])
+        run_dir = Path(rl['sft_run_dir'])
     progress.set_requests(requests, run_dir)
     inference_args = [
         '--config', Path(args.config).resolve(),
@@ -358,28 +360,28 @@ def run_round(args, config, round_dir, progress):
         '--transitions-output', transitions_path,
         '--batch-id', f'round{round_id}',
         '--run-dir', run_dir,
-        '--lean-project', solver['lean_project'],
-        '--num-simulations', solver['num_simulations'],
-        '--num-sampled-actions', solver['num_sampled_actions'],
-        '--tactic-timeout', solver['tactic_timeout'],
-        '--final-check-timeout', solver['final_check_timeout'],
-        '--parallel-searches', solver['parallel_searches'],
-        '--max-concurrent-lean-imports', solver['max_concurrent_lean_imports'],
-        '--inference-num-gpus', solver['inference_num_gpus'],
-        '--inference-batch-size', solver['inference_batch_size'],
-        '--inference-batch-timeout', solver['inference_batch_timeout'],
+        '--lean-project', deltaproof['lean_project'],
+        '--num-simulations', rl['num_simulations'],
+        '--num-sampled-actions', rl['num_sampled_actions'],
+        '--tactic-timeout', rl['tactic_timeout'],
+        '--final-check-timeout', rl['final_check_timeout'],
+        '--parallel-searches', rl['num_actors'],
+        '--max-concurrent-lean-imports', rl['max_concurrent_lean_imports'],
+        '--inference-num-gpus', rl['inference_num_gpus'],
+        '--inference-batch-size', rl['inference_batch_size'],
+        '--inference-batch-timeout', rl['inference_batch_timeout'],
         '--seed', args.seed,
         '--report-progress',
     ]
-    for lean_import in solver['imports']:
+    for lean_import in deltaproof['imports']:
         inference_args.extend(['--import', lean_import])
     if not os.path.isfile(results_path) or not os.path.isfile(transitions_path):
         with timer('deltaproof_inference'):
             run_external_python(
-                solver['python'],
+                deltaproof['python'],
                 'alphaproof.inference.infer',
                 *inference_args,
-                cwd=solver['repo_dir'],
+                cwd=deltaproof['repo_dir'],
                 progress=progress,
             )
 
@@ -424,7 +426,7 @@ def run_round(args, config, round_dir, progress):
 
     init_ray_cluster()
     with timer('premise_collection'):
-        generated_proofs = collect_premises(generated_proofs, solver)
+        generated_proofs = collect_premises(generated_proofs, deltaproof, rl)
     update_succ_lemmas(generated_proofs, sampler.succ_lemmas)
     update_succ_rates(generated_proofs, sampler.succ_rates)
     conjecture_examples = sampler.get_conjecture_examples(generated_proofs)

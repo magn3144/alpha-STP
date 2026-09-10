@@ -22,12 +22,13 @@ def run_llm_round(
     round_id,
     round_dir,
 ):
+    llm = experiment['llm']
     if round_id == 0:
-        model = experiment['base_model']
+        model = llm['base_model']
     else:
         model = Path(experiment['exp_dir']) / f'round{round_id - 1}' / 'RL_model'
     samples_key = 'first_round' if round_id == 0 else 'later_rounds'
-    samples_per_statement = experiment['samples_per_statement'][samples_key]
+    samples_per_statement = llm['samples_per_statement'][samples_key]
     with timer('generation_step', round=round_id):
         run_python(
             RL_DIR / 'RL_step1_generate.py',
@@ -35,7 +36,7 @@ def run_llm_round(
             '--exp_dir', round_dir,
             '--seed', round_id,
             '--temperature', experiment['temperature'],
-            '--dataset_config', experiment['dataset_config'],
+            '--dataset_config', llm['dataset_config'],
             '--sampler', experiment['sampler'],
             '--conjecture_multiplier', experiment['conjecture_multiplier'],
             '--samples_per_statement', samples_per_statement,
@@ -61,7 +62,7 @@ def run_deltaproof_round(
     round_id,
     round_dir,
 ):
-    solver = experiment['solver']
+    deltaproof = experiment['deltaproof']
     model = latest_conjecturer(experiment, exp_dir, round_id)
     with timer('generation_step', round=round_id):
         run_python(
@@ -77,17 +78,17 @@ def run_deltaproof_round(
     transitions_path = round_dir / 'deltaproof_transitions.jsonl'
     with timer('deltaproof_training_step', round=round_id):
         run_external_python(
-            solver['python'],
+            deltaproof['python'],
             'alphaproof.training.train_transitions',
             '--config', config_path,
             '--run-dir', exp_dir / 'deltaproof',
             '--input', transitions_path,
             '--batch-id', f'round{round_id}',
-            '--num-steps', solver['learner_steps_per_round'],
-            cwd=solver['repo_dir'],
+            '--num-steps', deltaproof['learner_steps_per_round'],
+            cwd=deltaproof['repo_dir'],
             dry_run=args.dry_run,
         )
-    if round_id > 0 and solver['conjecture_fraction']:
+    if round_id > 0 and deltaproof['conjecture_fraction']:
         with timer('conjecturer_training_step', round=round_id):
             run_python(
                 RL_DIR / 'RL_step2_train.py',
@@ -116,8 +117,9 @@ def main(args):
     dataset_size = experiment['dataset_size']
     batch_size = training['trainer']['train_batch_size']
     configure_timing(exp_dir, new_session=True)
+    solver_name = 'llm' if 'llm' in experiment else 'deltaproof'
     print(
-        f'Configuration: solver={experiment["solver"]["type"]}, '
+        f'Configuration: solver={solver_name}, '
         f'dataset_size={dataset_size}, batch_size={batch_size}',
         flush=True,
     )
@@ -126,7 +128,7 @@ def main(args):
             round_dir = exp_dir / f'round{round_id}'
             print(f'Starting self-play round {round_id}', flush=True)
             with timer('round', round=round_id):
-                if experiment['solver']['type'] == 'llm':
+                if 'llm' in experiment:
                     run_llm_round(
                         args,
                         config_path,
