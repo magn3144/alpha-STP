@@ -20,7 +20,7 @@ experiment:
     attempts_per_round: 4800
     conjecture_attempts: 16
     conjecture_fraction: 0.5
-    learner_steps_per_round: 1000
+    learner_steps_per_round: 500
 
 training:
   max_tune_length: 2048
@@ -114,7 +114,7 @@ deltaproof:
     training_steps: 10000  # Unused; learner_steps_per_round controls training steps.
     training_iterations: 100  # Unused by STP + DeltaProof.
     checkpoint_interval: 250
-    window_size: 25000
+    window_size: 250000
     value_weight: 0.01
     validation_fraction: 0.05
     validation_batch_size: 10
