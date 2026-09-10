@@ -2,7 +2,7 @@
 #BSUB -J deltaproof-stp
 #BSUB -q gpul40s
 #BSUB -W 24:00
-#BSUB -n 32
+#BSUB -n 64
 #BSUB -R "span[hosts=1]"
 #BSUB -gpu "num=2:mode=exclusive_process"
 #BSUB -R "rusage[mem=10GB]"
