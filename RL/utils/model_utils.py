@@ -53,9 +53,9 @@ def right_truncate(s, tokenizer, max_tokens):
 # Create a class to do batch inference.
 @ray.remote(num_cpus=0 if __DEBUG__ else 1, num_gpus=1)
 class LLMPredictor:
-    def __init__(self, model, tokenizer, id, **kwargs):
+    def __init__(self, model, tokenizer, id, gpu_memory_utilization=0.85, **kwargs):
         # Create an LLM.
-        self.kwargs = kwargs
+        self.kwargs = {'gpu_memory_utilization': gpu_memory_utilization, **kwargs}
         self.model = model
         self.llm = None
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
@@ -65,8 +65,11 @@ class LLMPredictor:
 
     def predict(self, batch: Dict[str, List], sampling_params: Any) -> List[Dict]:
         if self.llm is None:
-            self.llm = LLM(model=self.model, dtype='bfloat16', max_model_len = 1024, gpu_memory_utilization=0.85, **self.kwargs)
-        outputs = self.llm.generate(batch['text'], sampling_params, use_tqdm=(self.id == 0))
+            self.llm = LLM(model=self.model, dtype='bfloat16', max_model_len = 1024, **self.kwargs)
+        request_params = [sampling_params.clone() for _ in batch['ids']]
+        for params, request_id in zip(request_params, batch['ids']):
+            params.seed += request_id
+        outputs = self.llm.generate(batch['text'], request_params, use_tqdm=(self.id == 0))
         results = []
         for id, output in zip(batch['ids'], outputs):
             result = {"id": id, "text": output.outputs[0].text}

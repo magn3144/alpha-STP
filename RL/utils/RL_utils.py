@@ -703,11 +703,6 @@ def train_model(
     cleanup_dir(output_dir)
 
     training_config = {
-            'trainer.tracker.entity': wandb_entity,
-            'trainer.tracker.project': wandb_project,
-            'trainer.tracker.resume': 'must',
-            'trainer.tracker.id': wandb_id,
-
             'trainer.num_train_steps': max_iters,
             'trainer.checkpointer.base_path': os.path.join(output_dir, 'checkpoints'),
             'train_data': train_data_path,
@@ -728,6 +723,10 @@ def train_model(
         }
 
     config = load_training_config(training_config_path)
+    config['trainer']['id'] = wandb_id
+    config['trainer']['tracker'].update(
+        entity=wandb_entity, project=wandb_project, resume='must', id=wandb_id,
+    )
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as config_file:
         yaml.safe_dump(config, config_file)
         config_file.flush()

@@ -2,6 +2,7 @@ experiment:
   type: rl
   exp_dir: experiments/baseline_codet5p_770m_1_8
   conjecturer_model: "${STORAGE}/Conjecturer/SFT/9w7a7leb/step-2563"
+  vllm_gpu_memory_utilization: 0.85
   conjecturer_sft_dataset: "${STORAGE}/Conjecturer/data/SFT/train.json"
   conjecturer_sft_ratio: 5
   dataset_size: 0

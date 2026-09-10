@@ -97,6 +97,7 @@ DELTAPROOF_RL_SCHEMA = {
         'type': str,
         'exp_dir': str,
         'conjecturer_model': str,
+        'vllm_gpu_memory_utilization': NUMBER,
         'conjecturer_sft_dataset': str,
         'conjecturer_sft_ratio': int,
         'dataset_size': int,
@@ -235,6 +236,8 @@ def _validate_ranges(config, kind):
         if kind == 'rl':
             if experiment['solver']['type'] == 'deltaproof':
                 solver = experiment['solver']
+                if not 0 < experiment['vllm_gpu_memory_utilization'] <= 1:
+                    raise ValueError('experiment.vllm_gpu_memory_utilization must be in (0, 1]')
                 if experiment['conjecturer_sft_ratio'] < 0:
                     raise ValueError('experiment.conjecturer_sft_ratio must be nonnegative')
                 positive |= {
