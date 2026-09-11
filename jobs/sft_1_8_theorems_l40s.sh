@@ -1,0 +1,16 @@
+#!/bin/bash
+#BSUB -J stp-sft-1-8-theorems-l40s
+#BSUB -q gpul40s
+#BSUB -W 24:00
+#BSUB -n 16
+#BSUB -R "span[hosts=1]"
+#BSUB -gpu "num=1:mode=exclusive_process"
+#BSUB -R "rusage[mem=8GB]"
+#BSUB -M 8GB
+#BSUB -oo jobs/logs/sft_1_8_theorems_l40s_%J.out
+#BSUB -eo jobs/logs/sft_1_8_theorems_l40s_%J.err
+
+source "$LS_SUBCWD/jobs/common.sh"
+
+python -u RL/run_sft.py \
+    --config jobs/yaml/sft_1_8_theorems_L40S.yaml

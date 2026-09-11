@@ -13,6 +13,9 @@ SPLIT_SEED = 0
 TRAIN_SIZE = 20_096
 VALIDATION_SIZE = 1_024
 TEST_SIZE = 4_096
+CONJECTURE_MARKER = '<hard theorem>'
+THEOREM_SUBSET_DIVISOR = 8
+REDUCED_VALIDATION_SIZE = 1_000
 
 
 def example_key(example):
@@ -32,6 +35,63 @@ def take_unique(rows, size, excluded_keys):
     raise ValueError(f'Could only select {len(selected)} unique examples; requested {size}')
 
 
+def split_validation_by_prompt(examples, size, rng):
+    prompt_groups = {}
+    for example in examples:
+        prompt_groups.setdefault(example['prompt'], []).append(example)
+    prompt_groups = list(prompt_groups.values())
+    rng.shuffle(prompt_groups)
+    validation = []
+    validation_prompts = set()
+    remaining = size
+    for group in prompt_groups:
+        if len(group) > remaining:
+            continue
+        validation.extend(group)
+        validation_prompts.add(group[0]['prompt'])
+        remaining -= len(group)
+        if not remaining:
+            break
+    assert not remaining
+    train = [
+        example for example in examples
+        if example['prompt'] not in validation_prompts
+    ]
+    return train, validation
+
+
+def create_reduced_splits(dataset):
+    conjectures = [
+        example for example in dataset
+        if CONJECTURE_MARKER in example['prompt']
+    ]
+    theorems = [
+        example for example in dataset
+        if CONJECTURE_MARKER not in example['prompt']
+    ]
+    rng = random.Random(SPLIT_SEED)
+    selected_theorems = rng.sample(
+        theorems,
+        len(theorems) // THEOREM_SUBSET_DIVISOR,
+    )
+    validation_theorems = round(
+        REDUCED_VALIDATION_SIZE * len(selected_theorems)
+        / (len(selected_theorems) + len(conjectures))
+    )
+    validation_conjectures = REDUCED_VALIDATION_SIZE - validation_theorems
+    train_theorems, validation_theorems = split_validation_by_prompt(
+        selected_theorems, validation_theorems, rng
+    )
+    train_conjectures, validation_conjectures = split_validation_by_prompt(
+        conjectures, validation_conjectures, rng
+    )
+    train = train_theorems + train_conjectures
+    validation = validation_theorems + validation_conjectures
+    rng.shuffle(train)
+    rng.shuffle(validation)
+    return train, validation
+
+
 if __name__ == '__main__':
     data_root = str(REPO_DIR / 'data/dataset')
     huggingface_cache = os.path.join(data_root, 'huggingface_cache')
@@ -45,6 +105,38 @@ if __name__ == '__main__':
     print(f'Number of examples in the full SFT training split: {len(full_train_dataset)}')
     write_data(json.dumps(full_train_dataset), os.path.join(data_root, 'prover_sft/mathlib_leanworkbook.json'), 'json', no_compression=True)
     write_data(json.dumps(full_eval_dataset), os.path.join(data_root, 'prover_sft/eval.json'), 'json', no_compression=True)
+
+    reduced_train, reduced_validation = create_reduced_splits(full_train_dataset)
+    reduced_dir = os.path.join(data_root, 'prover_sft_1_8_theorems')
+    write_data(
+        json.dumps(reduced_train),
+        os.path.join(reduced_dir, 'train.json'),
+        'json',
+        no_compression=True,
+    )
+    write_data(
+        json.dumps(reduced_validation),
+        os.path.join(reduced_dir, 'validation.json'),
+        'json',
+        no_compression=True,
+    )
+    reduced_metadata = {
+        'dataset': DATASET_NAME,
+        'seed': SPLIT_SEED,
+        'theorem_subset_divisor': THEOREM_SUBSET_DIVISOR,
+        'source_theorems': sum(CONJECTURE_MARKER not in example['prompt'] for example in full_train_dataset),
+        'source_conjectures': sum(CONJECTURE_MARKER in example['prompt'] for example in full_train_dataset),
+        'train_theorems': sum(CONJECTURE_MARKER not in example['prompt'] for example in reduced_train),
+        'train_conjectures': sum(CONJECTURE_MARKER in example['prompt'] for example in reduced_train),
+        'validation_theorems': sum(CONJECTURE_MARKER not in example['prompt'] for example in reduced_validation),
+        'validation_conjectures': sum(CONJECTURE_MARKER in example['prompt'] for example in reduced_validation),
+    }
+    write_data(
+        json.dumps(reduced_metadata, indent=2),
+        os.path.join(reduced_dir, 'split_metadata.json'),
+        'json',
+        no_compression=True,
+    )
 
     # create mathlib dataset
     mathlib_dataset = [example for example in full_train_dataset if 'lean_workbook' not in example['prompt']]

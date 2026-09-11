@@ -1,0 +1,48 @@
+experiment:
+  type: sft
+  run_dir: "${DATA}/runs/sft_1_8_theorems_deepseek_coder_1.3b_l40s"
+  train_data: "${DATA}/dataset/prover_sft_1_8_theorems/train.json"
+  validation_data: "${DATA}/dataset/prover_sft_1_8_theorems/validation.json"
+  base_model: "data/models/deepseek-coder-1.3b-base"
+
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
+
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deepseek-sft-1-8-theorems
+      tags: [deepseek-ai/deepseek-coder-1.3b-base, sft, 1-8-theorems]
+
+    seed: 0
+    mp: p=f32,c=bfloat16
+    train_batch_size: 20
+    model_axis_size: 1
+    num_train_steps: 3665
+    steps_per_eval: 40
+    max_eval_batches: 50
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 20
+    per_device_parallelism: 20
+
+  # Export at steps 458, 916, 1374, 1832, 2290, 2748, 3206, and 3664.
+  save_freq: 458
+  eval_on_first_step: false
+
+  optimizer:
+    learning_rate: 1.0e-5
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    warmup: 365
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0
