@@ -14,5 +14,4 @@
 source "$LS_SUBCWD/jobs/common.sh"
 
 python -u RL/run_sft.py \
-    --config jobs/yaml/sft_conjecturer_A100_80GB.yaml \
-    --no-eval
+    --config jobs/yaml/sft_conjecturer_A100_80GB.yaml

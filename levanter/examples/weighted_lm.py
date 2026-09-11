@@ -240,8 +240,12 @@ def train(config: TrainArgs):
             logger.info("Loading eval data.")
             eval_dataset = mk_dataset(config.eval_data, config.eval_data_cache_dir, config.trainer.eval_batch_size, tokenizer)
             
+            max_eval_examples = None
+            if config.trainer.max_eval_batches is not None:
+                max_eval_examples = config.trainer.max_eval_batches * config.trainer.eval_batch_size
             cb = levanter.eval.cb_tagged_lm_evaluate(
-                trainer.EvalBatch, [(eval_dataset, ['val'])], trainer.device_mesh, compute_axis_mapping, None
+                trainer.EvalBatch, [(eval_dataset, ['val'])], trainer.device_mesh, compute_axis_mapping,
+                max_examples_per_dataset=max_eval_examples,
             )
 
             def evaluate_model(info):

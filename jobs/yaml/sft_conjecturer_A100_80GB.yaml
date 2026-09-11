@@ -21,9 +21,11 @@ training:
     mp: p=f32,c=bfloat16
     # Batch 20 at length 2048 completed on a 48GB L40S (job 29315737).
     train_batch_size: 20
-    # One pass over all 51,273 conjectures, with seven repeated rows for the final batch.
-    num_train_steps: 2564
-    steps_per_eval: 100
+    # One pass over 49,260 training samples, with no batch padding.
+    num_train_steps: 2463
+    # Evaluate 500 validation samples (25 batches of 20) every 50 training steps.
+    steps_per_eval: 50
+    max_eval_batches: 25
     tensor_parallel_axes: [mlp, heads]
     per_device_eval_parallelism: 20
     per_device_parallelism: 20
@@ -40,7 +42,7 @@ training:
     epsilon: 1.0e-5
     max_grad_norm: 1.0
     lr_schedule: cosine
-    warmup: 256
+    warmup: 246
     stable: 0.0
     cooldown: 0.0
     min_lr_ratio: 1.0
