@@ -10,9 +10,9 @@ experiment:
   llm:
     base_model: "MODEL_PATH"
     dataset_config: "DATASET_CONFIG_PATH"
-    samples_per_statement:
-      first_round: 32
-      later_rounds: 16
+    attempts_per_round: 4800
+    conjecture_attempts: 16
+    conjecture_fraction: 0.5
 
 training:
   max_tune_length: 2048

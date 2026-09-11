@@ -85,10 +85,9 @@ RL_SCHEMA = {
         'llm': {
             'base_model': str,
             'dataset_config': str,
-            'samples_per_statement': {
-                'first_round': int,
-                'later_rounds': int,
-            },
+            'attempts_per_round': int,
+            'conjecture_attempts': int,
+            'conjecture_fraction': NUMBER,
         },
     },
     'training': TRAINING_SCHEMA,
@@ -255,11 +254,24 @@ def _validate_ranges(config, kind):
                     )
             else:
                 positive['experiment.epochs'] = experiment['epochs']
-                samples = experiment['llm']['samples_per_statement']
+                llm = experiment['llm']
                 positive |= {
-                    'experiment.llm.samples_per_statement.first_round': samples['first_round'],
-                    'experiment.llm.samples_per_statement.later_rounds': samples['later_rounds'],
+                    'experiment.llm.attempts_per_round': llm['attempts_per_round'],
+                    'experiment.llm.conjecture_attempts': llm['conjecture_attempts'],
                 }
+                if llm['conjecture_fraction'] not in (0, 0.5):
+                    raise ValueError(
+                        'experiment.llm.conjecture_fraction must be 0 or 0.5'
+                    )
+                divisor = 2 * llm['conjecture_attempts']
+                if (
+                    llm['conjecture_fraction'] == 0.5
+                    and llm['attempts_per_round'] % divisor != 0
+                ):
+                    raise ValueError(
+                        'experiment.llm.attempts_per_round must be divisible '
+                        'by twice conjecture_attempts'
+                    )
         else:
             positive['experiment.samples_per_statement'] = experiment['samples_per_statement']
             if kind == 'expert_iteration':

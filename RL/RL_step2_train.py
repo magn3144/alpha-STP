@@ -15,7 +15,7 @@ from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import START_THM, START_LEMMA_STMT, END_THM, INVOKED_LEMMA, PROVER_PROMPT
-from utils.RL_utils import calculate_cumulative_solve_rate, train_model, load_training_config, load_wandb_config
+from utils.RL_utils import calculate_cumulative_solve_rate, get_conjecture_level, train_model, load_training_config, load_wandb_config
 from utils.file_utils import path_exists, read_file, write_data
 from utils.timing_utils import configure_timing, EventTimer
 
@@ -141,8 +141,13 @@ if __name__ == "__main__":
     if args.conjecturer_only:
         new_ds = []
     else:
-        # filter out proofs with too high success rate
-        valid_proofs = [test_info for test_info in valid_proofs if np.mean(all_test_results[test_info['statement']]) <= 0.5]
+        # Dataset statements have one attempt, so only conjectures have a meaningful pass rate.
+        valid_proofs = [
+            test_info
+            for test_info in valid_proofs
+            if get_conjecture_level(test_info) == 0
+            or np.mean(all_test_results[test_info['statement']]) <= 0.5
+        ]
         new_ds = format_and_deduplicate_dataset(valid_proofs, train_ds, generated_proofs)
         if len(new_ds) == 0:
             logging.error(f'[Erorr] No new data generated. Exiting...')

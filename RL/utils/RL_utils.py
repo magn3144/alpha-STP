@@ -457,7 +457,8 @@ class Sampler_base:
                     continue
                 for _ in range(test_info.get('matching_weight', 1)):
                     conjecture_inputs.append(test_info | {'shared_lemma': invoked_lemma, 'shared_lemma_statement': self.avaliable_lemmas[invoked_lemma]})
-        conjecture_inputs = conjecture_inputs[:len(lemmas_to_generate)]
+        conjecture_target = kwargs['conjecture_target']
+        conjecture_inputs = conjecture_inputs[:conjecture_target]
         
         logging.info(f'#conjecture inputs = {len(conjecture_inputs)}')
         if len(conjecture_inputs) == 0:
@@ -465,7 +466,7 @@ class Sampler_base:
             return lemmas_to_generate
 
         pool = ActorPool(ray_inference_actors)
-        conjecture_multiplier = max(kwargs['conjecture_multiplier'], min(len(lemmas_to_generate) * 3 // len(conjecture_inputs), 8))
+        conjecture_multiplier = max(kwargs['conjecture_multiplier'], min(conjecture_target * 3 // len(conjecture_inputs), 8))
         conjecture_lemmas = kwargs['collect_conjecture'](pool, len(ray_inference_actors), conjecture_inputs * conjecture_multiplier, self.lemma_mapping, seed=seed)
         # deduplicate conjectures
         rng.shuffle(conjecture_lemmas)
@@ -492,9 +493,9 @@ class Sampler_base:
                 conjecture_lemmas_dedup.append(test_info)
                 
         logging.info(f'#conjecture lemmas before deduplication = {len(conjecture_lemmas)}, after deduplication = {len(conjecture_lemmas_dedup)}')
-        if len(conjecture_lemmas_dedup) > len(lemmas_to_generate):
+        if len(conjecture_lemmas_dedup) > conjecture_target:
             rng.shuffle(conjecture_lemmas_dedup)
-            conjecture_lemmas_dedup = conjecture_lemmas_dedup[:len(lemmas_to_generate)]
+            conjecture_lemmas_dedup = conjecture_lemmas_dedup[:conjecture_target]
             logging.info(f'Randomly select {len(conjecture_lemmas_dedup)} conjecture lemmas')
         
         ret = [test_info for test_info in lemmas_to_generate + conjecture_lemmas_dedup if test_info['lemma_id'] not in self.succ_lemmas]
@@ -554,7 +555,9 @@ class Sampler_base:
             project_to: List[Dict],
             save_dir: str = None,
             round_id: int = 0,
-            sps: int = 16,
+            attempts_per_round=4800,
+            conjecture_attempts=16,
+            conjecture_fraction=0.5,
             **kwargs,
     ) -> List[Dict]:
         ray_inference_actors, model_dir = create_inference_actors(model_dir, tokenizer_path, enable_prefix_caching=False)
@@ -563,14 +566,50 @@ class Sampler_base:
             insert_lemma(self.lemma_mapping, test_info)
         for test_info in project_to:
             insert_lemma(self.lemma_mapping, test_info)
-        selected_lemmas = self.select(lemmas_to_generate, 
-                                      ray_inference_actors=ray_inference_actors, 
-                                      seed=seed,
-                                      **kwargs)
-        logging.info(f'#selected statements = {len(selected_lemmas)}')
-        selected_lemmas = deepcopy(selected_lemmas * sps)
 
+        if round_id == 0 or conjecture_fraction == 0:
+            dataset_attempts = attempts_per_round
+            conjecture_target = 0
+            conjectures = []
+        else:
+            dataset_attempts = attempts_per_round // 2
+            conjecture_target = attempts_per_round // 2 // conjecture_attempts
+            selected_lemmas = self.select(
+                lemmas_to_generate,
+                ray_inference_actors=ray_inference_actors,
+                seed=seed,
+                conjecture_target=conjecture_target,
+                **kwargs,
+            )
+            conjectures = [
+                test_info
+                for test_info in selected_lemmas
+                if get_conjecture_level(test_info) > 0
+            ]
+            if len(conjectures) < conjecture_target:
+                raise ValueError(
+                    f'Only {len(conjectures)} distinct conjectures were generated; '
+                    f'{conjecture_target} are required.'
+                )
+
+        dataset_lemmas = {
+            test_info['lemma_id']: test_info
+            for test_info in lemmas_to_generate
+            if test_info['lemma_id'] not in self.succ_lemmas
+        }
+        dataset_lemmas = list(dataset_lemmas.values())
+        if len(dataset_lemmas) < dataset_attempts:
+            raise ValueError(
+                f'Only {len(dataset_lemmas)} unsolved dataset statements remain; '
+                f'{dataset_attempts} are required for this round.'
+            )
         rng = np.random.default_rng(seed)
+        rng.shuffle(dataset_lemmas)
+        selected_lemmas = dataset_lemmas[:dataset_attempts]
+        selected_lemmas += conjectures * conjecture_attempts
+        logging.info(f'#selected statements = {len(selected_lemmas)}')
+        selected_lemmas = deepcopy(selected_lemmas)
+
         rng.shuffle(selected_lemmas)
         generated_proofs_dedup = generate_and_test(selected_lemmas, collect_traj, ray_inference_actors, self.lemma_mapping, seed, save_dir)
         logging.info(f'#generated proofs before deduplication = {len(selected_lemmas)}, total proofs after deduplication = {len(generated_proofs_dedup)}')
