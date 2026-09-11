@@ -75,19 +75,21 @@ def run_deltaproof_round(
         )
     if not args.dry_run and (round_dir / 'experiment_complete').is_file():
         return False
-    transitions_path = round_dir / 'deltaproof_transitions.jsonl'
-    with timer('deltaproof_training_step', round=round_id):
-        run_external_python(
-            deltaproof['python'],
-            'alphaproof.training.train_transitions',
-            '--config', config_path,
-            '--run-dir', exp_dir / 'deltaproof',
-            '--input', transitions_path,
-            '--batch-id', f'round{round_id}',
-            '--num-steps', deltaproof['learner_steps_per_round'],
-            cwd=deltaproof['repo_dir'],
-            dry_run=args.dry_run,
-        )
+    learner_steps = deltaproof['learner_steps_per_round']
+    if learner_steps:
+        transitions_path = round_dir / 'deltaproof_transitions.jsonl'
+        with timer('deltaproof_training_step', round=round_id):
+            run_external_python(
+                deltaproof['python'],
+                'alphaproof.training.train_transitions',
+                '--config', config_path,
+                '--run-dir', exp_dir / 'deltaproof',
+                '--input', transitions_path,
+                '--batch-id', f'round{round_id}',
+                '--num-steps', learner_steps,
+                cwd=deltaproof['repo_dir'],
+                dry_run=args.dry_run,
+            )
     if round_id > 0 and deltaproof['conjecture_fraction']:
         with timer('conjecturer_training_step', round=round_id):
             run_python(

@@ -232,8 +232,11 @@ def _validate_ranges(config, kind):
                     'experiment.deltaproof.conjecturer_epochs': deltaproof['conjecturer_epochs'],
                     'experiment.deltaproof.attempts_per_round': deltaproof['attempts_per_round'],
                     'experiment.deltaproof.conjecture_attempts': deltaproof['conjecture_attempts'],
-                    'experiment.deltaproof.learner_steps_per_round': deltaproof['learner_steps_per_round'],
                 }
+                if deltaproof['learner_steps_per_round'] < 0:
+                    raise ValueError(
+                        'experiment.deltaproof.learner_steps_per_round must be nonnegative'
+                    )
                 if deltaproof['conjecture_fraction'] not in (0, 0.5):
                     raise ValueError(
                         'experiment.deltaproof.conjecture_fraction must be 0 or 0.5'
