@@ -7,6 +7,6 @@ module load python3/3.10.18
 source "$repo_root/.venv/bin/activate"
 
 model=deepseek-ai/deepseek-coder-1.3b-base
-destination="$repo_root/models/deepseek-coder-1.3b-base"
+destination="$repo_root/data/models/deepseek-coder-1.3b-base"
 
 hf download "$model" --local-dir "$destination"

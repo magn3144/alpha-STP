@@ -176,10 +176,8 @@ jobs/logs/*.out
 jobs/logs/*.err
 
 data/
-models/
 *.err
 *.out
-wandb/
 /experiments/
 
 .DS_Store

@@ -18,6 +18,8 @@ module load python3/3.10.18
 source "$LS_SUBCWD/.venv/bin/activate"
 
 export DATA="$LS_SUBCWD/data"
+export WANDB_DIR="$DATA"
+mkdir -p "$WANDB_DIR"
 export TOKENIZERS_PARALLELISM=false
 
 python --version

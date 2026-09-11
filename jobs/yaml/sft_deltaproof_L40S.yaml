@@ -3,7 +3,7 @@ experiment:
   run_dir: "${DATA}/runs/sft_deltaproof_deepseek_coder_1.3b_l40s"
   train_data: "${DATA}/dataset/deltaproof/sft/train.json"
   validation_data: "${DATA}/dataset/deltaproof/sft/validation.json"
-  base_model: "models/deepseek-coder-1.3b-base"
+  base_model: "data/models/deepseek-coder-1.3b-base"
 
 training:
   max_tune_length: 2048

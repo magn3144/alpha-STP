@@ -3,7 +3,7 @@ experiment:
   run_dir: "${DATA}/runs/sft_conjecturer_deepseek_coder_1.3b_a100"
   train_data: "${DATA}/dataset/conjecturer_sft/train.json"
   validation_data: "${DATA}/dataset/conjecturer_sft/validation.json"
-  base_model: "models/deepseek-coder-1.3b-base"
+  base_model: "data/models/deepseek-coder-1.3b-base"
 
 training:
   max_tune_length: 2048
