@@ -52,7 +52,9 @@ TRAINING_SCHEMA = {
 SFT_SCHEMA = {
     'experiment': {
         'type': str,
-        'storage': str,
+        'run_dir': str,
+        'train_data': str,
+        'validation_data': str,
         'base_model': str,
     },
     'training': {
@@ -60,6 +62,7 @@ SFT_SCHEMA = {
         'trainer': {
             **TRAINER_SCHEMA,
             'num_train_steps': int,
+            'max_eval_batches': int,
         },
         'save_freq': int,
         'optimizer': {

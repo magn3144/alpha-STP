@@ -12,16 +12,16 @@ def main(args):
     config = load_experiment_config(args.config, 'sft')
     experiment = config['experiment']
     training = config['training']
-    storage = Path(experiment['storage'])
+    run_dir = Path(experiment['run_dir'])
     base_model = Path(experiment['base_model'])
-    train_data = storage / 'data/SFT/train.json'
-    validation_data = storage / 'data/SFT/validation.json'
+    train_data = Path(experiment['train_data'])
+    validation_data = Path(experiment['validation_data'])
     if not args.dry_run:
         data_paths = [train_data] if args.no_eval else [train_data, validation_data]
         missing = [path for path in data_paths if not path.exists()]
         if missing:
             paths = ', '.join(str(path) for path in missing)
-            raise FileNotFoundError(f'Missing generated SFT split(s): {paths}. Run RL/prepare_datasets.py first.')
+            raise FileNotFoundError(f'Missing generated SFT split(s): {paths}. Prepare the configured datasets first.')
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as config_file:
         if args.cache_only:
@@ -30,7 +30,7 @@ def main(args):
         config_file.flush()
 
         cache_name = f'{base_model.name}_{training["max_tune_length"]}'
-        cache_dir = storage / 'data/SFT/cache' / cache_name
+        cache_dir = train_data.parent / 'cache' / cache_name
         eval_args = [] if args.no_eval else [
             '--eval_data', validation_data,
             '--eval_data_cache_dir', cache_dir / 'validation',
@@ -41,8 +41,8 @@ def main(args):
             '--config_path', config_file.name,
             '--model_name_or_path', base_model,
             '--tokenizer_name_or_path', base_model,
-            '--trainer.checkpointer.base_path', storage / 'SFT_ckpt',
-            '--hf_save_path', storage / 'SFT',
+            '--trainer.checkpointer.base_path', run_dir / 'checkpoints',
+            '--hf_save_path', run_dir / 'models',
             '--train_data', train_data,
             '--train_data_cache_dir', cache_dir / 'train',
             *eval_args,

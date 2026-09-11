@@ -33,9 +33,9 @@ def take_unique(rows, size, excluded_keys):
 
 
 if __name__ == '__main__':
-    storage = str(REPO_DIR / 'storage')
-    huggingface_cache = os.path.join(storage, 'huggingface_cache')
-    print(f'Saving downloaded and prepared datasets under {storage}')
+    data_root = str(REPO_DIR / 'data/dataset')
+    huggingface_cache = os.path.join(data_root, 'huggingface_cache')
+    print(f'Saving downloaded and prepared datasets under {data_root}')
     sft_train_dataset = load_dataset(DATASET_NAME, split="train", cache_dir=huggingface_cache)
     sft_eval_dataset = load_dataset(DATASET_NAME, split="eval", cache_dir=huggingface_cache)
     full_train_dataset = [example for example in sft_train_dataset]
@@ -43,13 +43,13 @@ if __name__ == '__main__':
 
     # Preserve the released full splits for final retraining and optional full evaluation.
     print(f'Number of examples in the full SFT training split: {len(full_train_dataset)}')
-    write_data(json.dumps(full_train_dataset), os.path.join(storage, 'data/SFT/mathlib_leanworkbook.json'), 'json', no_compression=True)
-    write_data(json.dumps(full_eval_dataset), os.path.join(storage, 'data/SFT/eval.json'), 'json', no_compression=True)
+    write_data(json.dumps(full_train_dataset), os.path.join(data_root, 'prover_sft/mathlib_leanworkbook.json'), 'json', no_compression=True)
+    write_data(json.dumps(full_eval_dataset), os.path.join(data_root, 'prover_sft/eval.json'), 'json', no_compression=True)
 
     # create mathlib dataset
     mathlib_dataset = [example for example in full_train_dataset if 'lean_workbook' not in example['prompt']]
     print(f'Number of examples in the mathlib dataset: {len(mathlib_dataset)}')
-    write_data(json.dumps(mathlib_dataset), os.path.join(storage, 'data/SFT/mathlib.json'), 'json', no_compression=True)
+    write_data(json.dumps(mathlib_dataset), os.path.join(data_root, 'prover_sft/mathlib.json'), 'json', no_compression=True)
 
     # Deterministically shuffle and extract prompt-disjoint experiment splits.
     shuffled_train = full_train_dataset.copy()
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     assert train_keys.isdisjoint(test_keys)
     assert validation_keys.isdisjoint(test_keys)
 
-    data_dir = os.path.join(storage, 'data/SFT')
+    data_dir = os.path.join(data_root, 'prover_sft')
     write_data(json.dumps(train_dataset), os.path.join(data_dir, 'train.json'), 'json', no_compression=True)
     write_data(json.dumps(validation_dataset), os.path.join(data_dir, 'validation.json'), 'json', no_compression=True)
     write_data(json.dumps(test_dataset), os.path.join(data_dir, 'test.json'), 'json', no_compression=True)

@@ -16,9 +16,9 @@ def main():
     parser = argparse.ArgumentParser(description='Split the released STP SFT conjecturer examples.')
     parser.add_argument(
         '--source-dir', type=Path,
-        default=REPO_DIR / 'storage/huggingface_cache/kfdong___stp_lean_sft/default/0.0.0' / REVISION,
+        default=REPO_DIR / 'data/dataset/huggingface_cache/kfdong___stp_lean_sft/default/0.0.0' / REVISION,
     )
-    parser.add_argument('--output-dir', type=Path, default=REPO_DIR / 'storage/Conjecturer/data/SFT')
+    parser.add_argument('--output-dir', type=Path, default=REPO_DIR / 'data/dataset/conjecturer_sft')
     parser.add_argument('--batch-size', type=int, default=20)
     parser.add_argument('--validation-size', type=int, default=2000)
     args = parser.parse_args()

@@ -42,8 +42,8 @@ CPU_PER_TASK = 1.5
 
 __DEBUG__ = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 REPO_DIR = os.path.abspath(os.path.join(__file__, '../../..'))
-STORAGE = os.getenv('STORAGE', None)
-assert STORAGE is not None, 'STORAGE is not set'
+DATA = os.getenv('DATA', None)
+assert DATA is not None, 'DATA is not set'
 
 
 def load_wandb_config(path):
@@ -707,8 +707,8 @@ def train_model(
             'trainer.checkpointer.base_path': os.path.join(output_dir, 'checkpoints'),
             'train_data': train_data_path,
             'train_data_cache_dir': os.path.join(data_cache_dir, 'train'),
-            'eval_data': os.path.join(STORAGE, 'data/SFT/eval.json'),
-            'eval_data_cache_dir': os.path.join(STORAGE, 'data/SFT/eval_cache'),
+            'eval_data': os.path.join(DATA, 'dataset/prover_sft/eval.json'),
+            'eval_data_cache_dir': os.path.join(DATA, 'dataset/prover_sft/eval_cache'),
             'model_name_or_path': train_from,
             'tokenizer_name_or_path': train_from,
             'save_freq': max_iters - 1,

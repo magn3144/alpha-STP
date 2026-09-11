@@ -1,13 +1,13 @@
 experiment:
   type: rl
-  exp_dir: "${STORAGE}/runs/Expit_codet5p_770m_1_8"
+  exp_dir: "${DATA}/runs/expert_iteration_deltaproof_codet5p_770m_2x_l40s_1_8"
   dataset_size: 0
   total_rounds: 10
   conjecture_multiplier: 10
   deltaproof:
-    conjecturer_model: "${STORAGE}/Conjecturer/SFT/9w7a7leb/step-2563"
+    conjecturer_model: "${DATA}/runs/sft_conjecturer_deepseek_coder_1.3b_a100/models/9w7a7leb/step-2563"
     vllm_gpu_memory_utilization: 0.85
-    conjecturer_sft_dataset: "${STORAGE}/Conjecturer/data/SFT/train.json"
+    conjecturer_sft_dataset: "${DATA}/dataset/conjecturer_sft/train.json"
     conjecturer_sft_ratio: 5
     conjecturer_temperature: 1.0
     conjecturer_epochs: 1

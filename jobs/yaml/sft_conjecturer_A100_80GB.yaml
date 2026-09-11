@@ -1,7 +1,9 @@
 experiment:
   type: sft
-  storage: "${STORAGE}/Conjecturer"
-  base_model: "${STORAGE}/models/deepseek-coder-1.3b-base"
+  run_dir: "${DATA}/runs/sft_conjecturer_deepseek_coder_1.3b_a100"
+  train_data: "${DATA}/dataset/conjecturer_sft/train.json"
+  validation_data: "${DATA}/dataset/conjecturer_sft/validation.json"
+  base_model: "models/deepseek-coder-1.3b-base"
 
 training:
   max_tune_length: 2048
@@ -21,6 +23,7 @@ training:
     mp: p=f32,c=bfloat16
     # Batch 20 at length 2048 completed on a 48GB L40S (job 29315737).
     train_batch_size: 20
+    model_axis_size: 1
     # One pass over 49,260 training samples, with no batch padding.
     num_train_steps: 2463
     # Evaluate 500 validation samples (25 batches of 20) every 50 training steps.

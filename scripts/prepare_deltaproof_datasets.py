@@ -188,12 +188,12 @@ def parse_args():
     parser.add_argument(
         '--leantree-dataset',
         type=Path,
-        default=REPO_DIR / 'storage/DeltaProof/data/leantree_mathlib.jsonl',
+        default=REPO_DIR / 'data/dataset/deltaproof/leantree_mathlib.jsonl',
     )
     parser.add_argument(
         '--mathlib-packages',
         type=Path,
-        default=REPO_DIR / 'storage/DeltaProof/source',
+        default=REPO_DIR / 'data/dataset/deltaproof_source',
     )
     parser.add_argument(
         '--rl-input',
@@ -206,12 +206,12 @@ def parse_args():
     parser.add_argument(
         '--conjecture-input',
         type=Path,
-        default=REPO_DIR / 'storage/data/SFT/train.json',
+        default=REPO_DIR / 'data/dataset/prover_sft/train.json',
     )
     parser.add_argument(
         '--output-dir',
         type=Path,
-        default=REPO_DIR / 'storage/DeltaProof/data',
+        default=REPO_DIR / 'data/dataset/deltaproof',
     )
     parser.add_argument('--fraction', type=float, default=0.25)
     parser.add_argument('--validation-fraction', type=float, default=0.1)
@@ -232,7 +232,7 @@ def main():
         args.fraction,
         args.seed,
     )
-    sft_output_dir = args.output_dir / 'SFT'
+    sft_output_dir = args.output_dir / 'sft'
     write_sft_splits(
         args.leantree_dataset,
         args.mathlib_packages,
@@ -246,7 +246,7 @@ def main():
         sft_output_dir / 'train.json',
         args.seed,
     )
-    rl_output_path = args.output_dir / 'RL/numina_math_lean_passing_small.json'
+    rl_output_path = args.output_dir / 'rl/numina_math_lean_passing_small.json'
     rl_count = write_rl_dataset(args.rl_input, rl_output_path)
 
     metadata = {

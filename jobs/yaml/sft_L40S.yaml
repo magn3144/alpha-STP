@@ -1,7 +1,9 @@
 experiment:
   type: sft
-  storage: "${STORAGE}"
-  base_model: "${STORAGE}/models/deepseek-coder-1.3b-base"
+  run_dir: "${DATA}/runs/sft_deepseek_coder_1.3b_l40s"
+  train_data: "${DATA}/dataset/prover_sft/train.json"
+  validation_data: "${DATA}/dataset/prover_sft/validation.json"
+  base_model: "models/deepseek-coder-1.3b-base"
 
 training:
   max_tune_length: 2048
@@ -20,8 +22,10 @@ training:
     seed: 0
     mp: p=f32,c=bfloat16
     train_batch_size: 20
+    model_axis_size: 1
     num_train_steps: 1005
     steps_per_eval: 40
+    max_eval_batches: 52
     tensor_parallel_axes: [mlp, heads]
     per_device_eval_parallelism: 20
     per_device_parallelism: 20

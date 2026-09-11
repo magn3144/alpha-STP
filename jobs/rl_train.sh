@@ -15,9 +15,9 @@ source "$LS_SUBCWD/jobs/common.sh"
 base_model=deepseek-ai/DeepSeek-Prover-V1.5-SFT
 
 python -u RL/run_rl_train.py \
-    --exp-dir "$STORAGE/STP_LeanWorkbook_merged" \
+    --exp-dir "$DATA/runs/final_training_deepseek_prover_v1.5_a100_leanworkbook" \
     --train-from "$base_model" \
-    --sft-dataset "$STORAGE/data/SFT/mathlib.json" \
-    --merge-from "$STORAGE/STP_LeanWorkbook" \
+    --sft-dataset "$DATA/dataset/prover_sft/mathlib.json" \
+    --merge-from "$DATA/runs/stp_deepseek_prover_v1.5_a100_leanworkbook" \
     --merge-from-rounds 12 \
     --training-config jobs/yaml/rl_2x_A100_40gb.yaml

@@ -1,6 +1,6 @@
 experiment:
   type: expert_iteration
-  exp_dir: "${STORAGE}/Expit_LeanWorkbook"
+  exp_dir: "${DATA}/runs/expert_iteration_deepseek_prover_v1.5_a100_leanworkbook"
   base_model: deepseek-ai/DeepSeek-Prover-V1.5-SFT
   dataset_config: RL/dataset_configs/leanworkbook.json
   dataset_size: 0

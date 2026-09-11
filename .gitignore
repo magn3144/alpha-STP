@@ -175,7 +175,8 @@ cython_debug/
 jobs/logs/*.out
 jobs/logs/*.err
 
-storage/
+data/
+models/
 *.err
 *.out
 wandb/
