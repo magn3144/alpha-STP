@@ -13,13 +13,14 @@ REVISION = '7166a1964c466af947ae804a09857d69498b1b99'
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Extract every released STP SFT conjecturer example.')
+    parser = argparse.ArgumentParser(description='Split the released STP SFT conjecturer examples.')
     parser.add_argument(
         '--source-dir', type=Path,
         default=REPO_DIR / 'storage/huggingface_cache/kfdong___stp_lean_sft/default/0.0.0' / REVISION,
     )
     parser.add_argument('--output-dir', type=Path, default=REPO_DIR / 'storage/Conjecturer/data/SFT')
     parser.add_argument('--batch-size', type=int, default=20)
+    parser.add_argument('--validation-size', type=int, default=2000)
     args = parser.parse_args()
 
     examples = []
@@ -43,11 +44,18 @@ def main():
         json.dump(examples, output, ensure_ascii=False)
         output.write('\n')
 
-    random.Random(0).shuffle(examples)
-    padding = -len(examples) % args.batch_size
-    train_examples = examples + examples[:padding]
+    split_examples = examples.copy()
+    random.Random(0).shuffle(split_examples)
+    train_size = (len(split_examples) - args.validation_size) // args.batch_size * args.batch_size
+    assert train_size > 0
+    train_examples = split_examples[:train_size]
+    validation_examples = split_examples[train_size:]
     with (args.output_dir / 'train.json').open('w') as output:
         json.dump(train_examples, output, ensure_ascii=False)
+        output.write('\n')
+
+    with (args.output_dir / 'validation.json').open('w') as output:
+        json.dump(validation_examples, output, ensure_ascii=False)
         output.write('\n')
 
     metadata = {
@@ -57,13 +65,14 @@ def main():
         'source_rows': source_rows,
         'conjecturer_examples': len(examples),
         'selection': 'prompt ends with <hard theorem>',
-        'format': 'Unmodified original prompt and target; no deduplication or subsampling.',
+        'format': 'All original examples retained without deduplication or batch padding.',
         'seed': 0,
         'batch_size': args.batch_size,
-        'repeated_examples_for_final_batch': padding,
+        'repeated_examples_for_final_batch': 0,
         'train_rows': len(train_examples),
+        'validation_rows': len(validation_examples),
         'optimizer_steps_per_epoch': len(train_examples) // args.batch_size,
-        'evaluation': 'Disabled: the released eval split contains no conjecturer examples.',
+        'evaluation': 'Random sample held out from the released training split.',
     }
     (args.output_dir / 'metadata.json').write_text(json.dumps(metadata, indent=2) + '\n')
     print(json.dumps(metadata, indent=2), flush=True)
