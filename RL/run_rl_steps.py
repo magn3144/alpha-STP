@@ -27,8 +27,6 @@ def run_llm_round(
         model = llm['base_model']
     else:
         model = Path(experiment['exp_dir']) / f'round{round_id - 1}' / 'RL_model'
-    samples_key = 'first_round' if round_id == 0 else 'later_rounds'
-    samples_per_statement = llm['samples_per_statement'][samples_key]
     with timer('generation_step', round=round_id):
         run_python(
             RL_DIR / 'RL_step1_generate.py',
@@ -39,7 +37,9 @@ def run_llm_round(
             '--dataset_config', llm['dataset_config'],
             '--sampler', experiment['sampler'],
             '--conjecture_multiplier', experiment['conjecture_multiplier'],
-            '--samples_per_statement', samples_per_statement,
+            '--attempts_per_round', llm['attempts_per_round'],
+            '--conjecture_attempts', llm['conjecture_attempts'],
+            '--conjecture_fraction', llm['conjecture_fraction'],
             '--dataset_size', dataset_size,
             dry_run=args.dry_run,
         )

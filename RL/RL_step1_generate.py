@@ -29,7 +29,9 @@ if __name__ == "__main__":
     parser.add_argument("--temperature", type=float, default=1.0)
     parser.add_argument("--sampler", type=str, default='Sampler_conjecture')
     parser.add_argument("--conjecture_multiplier", type=int, default=1)
-    parser.add_argument("--samples_per_statement", type=int)
+    parser.add_argument("--attempts_per_round", type=int, required=True)
+    parser.add_argument("--conjecture_attempts", type=int, required=True)
+    parser.add_argument("--conjecture_fraction", type=float, required=True)
     parser.add_argument("--dataset_size", type=int, default=0)
     args = parser.parse_args()
     logging.debug(str(args))
@@ -86,7 +88,9 @@ if __name__ == "__main__":
                 save_dir=os.path.join(args.exp_dir, 'sampler_ckpt'),
                 collect_conjecture=collect_conjecture_fn, conjecture_multiplier=args.conjecture_multiplier,
                 round_id=round,
-                sps=args.samples_per_statement,
+                attempts_per_round=args.attempts_per_round,
+                conjecture_attempts=args.conjecture_attempts,
+                conjecture_fraction=args.conjecture_fraction,
                 project_to=formatted_ds)
 
     # log the distribution of succ rates for the generated lemmas

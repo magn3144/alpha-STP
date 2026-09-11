@@ -10,9 +10,9 @@ experiment:
   llm:
     base_model: "data/runs/sft_deepseek_coder_1.3b_l40s"
     dataset_config: "RL/dataset_configs/deltaproof_numina_1_8.json"
-    samples_per_statement:
-      first_round: 32
-      later_rounds: 16
+    attempts_per_round: 4800
+    conjecture_attempts: 16
+    conjecture_fraction: 0.5
 
 training:
   max_tune_length: 2048
