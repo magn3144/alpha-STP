@@ -154,7 +154,7 @@ def write_mixed_sft_train(proof_path, conjecture_path, output_path, seed):
     return len(proofs), len(conjectures), len(conjecture_pool)
 
 
-def write_rl_dataset(input_path, output_path):
+def write_rl_dataset(input_path, output_path, split):
     output_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = output_path.with_suffix(output_path.suffix + '.tmp')
     count = 0
@@ -169,7 +169,7 @@ def write_rl_dataset(input_path, output_path):
             json.dump(
                 {
                     'formal_statement': record['theorem'],
-                    'split': 'numina_math_lean_passing_small',
+                    'split': split,
                     'proof': [],
                 },
                 output_file,
@@ -200,7 +200,7 @@ def parse_args():
         type=Path,
         default=(
             DELTA_PROOF_DIR
-            / 'data/dataset/numina_math_lean_passing_small/train.jsonl'
+            / 'data/dataset/numina_math_lean_passing_1_8/train.jsonl'
         ),
     )
     parser.add_argument(
@@ -246,8 +246,14 @@ def main():
         sft_output_dir / 'train.json',
         args.seed,
     )
-    rl_output_path = args.output_dir / 'rl/numina_math_lean_passing_small.json'
-    rl_count = write_rl_dataset(args.rl_input, rl_output_path)
+    rl_output_dir = REPO_DIR / 'data/dataset/numina_math_lean_passing_1_8'
+    rl_count = write_rl_dataset(args.rl_input, rl_output_dir / 'train.json', 'train')
+    for split in ('validation', 'test'):
+        write_rl_dataset(
+            args.rl_input.parent / f'{split}.jsonl',
+            rl_output_dir / f'{split}.json',
+            split,
+        )
 
     metadata = {
         'sft_source': LEANTREE_URL,

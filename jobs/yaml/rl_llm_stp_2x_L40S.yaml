@@ -8,8 +8,8 @@ experiment:
   sampler: Sampler_base
   conjecture_multiplier: 10
   llm:
-    base_model: "MODEL_PATH"
-    dataset_config: "DATASET_CONFIG_PATH"
+    base_model: "data/runs/sft_deepseek_coder_1.3b_l40s"
+    dataset_config: "RL/dataset_configs/deltaproof_numina_1_8.json"
     samples_per_statement:
       first_round: 32
       later_rounds: 16
