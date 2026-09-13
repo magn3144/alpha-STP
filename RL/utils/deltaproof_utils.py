@@ -38,11 +38,6 @@ def select_dataset_theorems(dataset, solved, count, seed):
     unsolved = list(unsolved.values())
     if not unsolved:
         return []
-    if len(unsolved) < count:
-        raise ValueError(
-            f'Only {len(unsolved)} unsolved dataset theorems remain; '
-            f'{count} are required for this round.'
-        )
     rng = np.random.default_rng(seed)
     rng.shuffle(unsolved)
     return deepcopy(unsolved[:count])

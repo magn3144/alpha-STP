@@ -305,10 +305,25 @@ def run_round(args, config, round_dir, progress):
     if round_id == 0 or deltaproof['conjecture_fraction'] == 0:
         dataset_attempts = attempts
     else:
-        dataset_attempts = attempts // 2
-        conjecture_target = (
-            attempts // 2 // deltaproof['conjecture_attempts']
-        )
+        conjecture_budget = int(attempts * deltaproof['conjecture_fraction'])
+        dataset_attempts = attempts - conjecture_budget
+        conjecture_target = conjecture_budget // deltaproof['conjecture_attempts']
+
+    dataset_theorems = select_dataset_theorems(
+        dataset,
+        sampler.succ_lemmas,
+        dataset_attempts,
+        args.seed,
+    )
+    if not dataset_theorems and all(
+        test_info['lemma_id'] in sampler.succ_lemmas for test_info in dataset
+    ):
+        logging.info('All dataset theorems are solved.')
+        progress.save({'round': round_id, 'status': 'experiment_complete'})
+        Path(round_dir, 'experiment_complete').touch()
+        return
+
+    if round_id > 0 and deltaproof['conjecture_fraction']:
         init_ray_cluster()
         with timer('conjecture_generation'):
             conjectures = generate_conjectures(
@@ -323,18 +338,6 @@ def run_round(args, config, round_dir, progress):
             )
         ray.shutdown()
         gc.collect()
-
-    dataset_theorems = select_dataset_theorems(
-        dataset,
-        sampler.succ_lemmas,
-        dataset_attempts,
-        args.seed,
-    )
-    if not dataset_theorems:
-        logging.info('All dataset theorems are solved.')
-        progress.save({'round': round_id, 'status': 'experiment_complete'})
-        Path(round_dir, 'experiment_complete').touch()
-        return
     requests, test_infos = build_requests(
         dataset_theorems,
         conjectures,

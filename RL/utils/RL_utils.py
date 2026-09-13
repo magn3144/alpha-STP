@@ -599,11 +599,6 @@ class Sampler_base:
             if test_info['lemma_id'] not in self.succ_lemmas
         }
         dataset_lemmas = list(dataset_lemmas.values())
-        if len(dataset_lemmas) < dataset_attempts:
-            raise ValueError(
-                f'Only {len(dataset_lemmas)} unsolved dataset statements remain; '
-                f'{dataset_attempts} are required for this round.'
-            )
         rng = np.random.default_rng(seed)
         rng.shuffle(dataset_lemmas)
         selected_lemmas = dataset_lemmas[:dataset_attempts]

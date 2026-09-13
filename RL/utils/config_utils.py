@@ -239,18 +239,18 @@ def _validate_ranges(config, kind):
                     raise ValueError(
                         'experiment.deltaproof.learner_steps_per_round must be nonnegative'
                     )
-                if deltaproof['conjecture_fraction'] not in (0, 0.5):
+                if not 0 <= deltaproof['conjecture_fraction'] <= 1:
                     raise ValueError(
-                        'experiment.deltaproof.conjecture_fraction must be 0 or 0.5'
+                        'experiment.deltaproof.conjecture_fraction must be between 0 and 1'
                     )
-                divisor = 2 * deltaproof['conjecture_attempts']
-                if (
-                    deltaproof['conjecture_fraction'] == 0.5
-                    and deltaproof['attempts_per_round'] % divisor != 0
-                ):
+                conjecture_budget = int(
+                    deltaproof['attempts_per_round']
+                    * deltaproof['conjecture_fraction']
+                )
+                if conjecture_budget % deltaproof['conjecture_attempts'] != 0:
                     raise ValueError(
-                        'experiment.deltaproof.attempts_per_round must be divisible '
-                        'by twice conjecture_attempts'
+                        'the conjecture attempt budget must be divisible by '
+                        'experiment.deltaproof.conjecture_attempts'
                     )
             else:
                 positive['experiment.epochs'] = experiment['epochs']

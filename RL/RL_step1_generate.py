@@ -10,6 +10,7 @@ import numpy as np
 import gc
 from collections import defaultdict
 from copy import deepcopy
+from pathlib import Path
 from utils.file_utils import path_exists, read_file, write_data
 from utils.model_utils import init_ray_cluster
 from utils.RL_utils import collect_trajectories, collect_conjecture, load_ds_from_config
@@ -71,6 +72,14 @@ if __name__ == "__main__":
     else:
         sampler = Sampler()
         sampler.init_lemma_mapping(formatted_ds)
+
+    if all(
+        test_info['lemma_id'] in sampler.succ_lemmas
+        for test_info in selected_statements
+    ):
+        logging.info('All dataset theorems are solved.')
+        Path(args.exp_dir, 'experiment_complete').touch()
+        exit(0)
     
     init_ray_cluster()
 

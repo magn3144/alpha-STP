@@ -21,3 +21,4 @@
 - Since we use a much smaller global batch size we used square root scaling to find an appropriate learning rate. Warmup steps were scaled as a fraction of optimizer steps.
 - conjecturer_sft_ratio was added to limit the ratio of sft samples to new generated conjecturer samples in a STP round.
 - Changed how run data and datasets are stored, to make it more organized.
+- Both the deltaproof and llm solver path attempts to solve each theorem from the dataset once, instead of doing 16 attempts per theorem.

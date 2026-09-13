@@ -43,6 +43,8 @@ def run_llm_round(
             '--dataset_size', dataset_size,
             dry_run=args.dry_run,
         )
+    if not args.dry_run and (round_dir / 'experiment_complete').is_file():
+        return False
     with timer('round_training_step', round=round_id):
         run_python(
             RL_DIR / 'RL_step2_train.py',
@@ -52,6 +54,7 @@ def run_llm_round(
             '--training_config', config_path,
             dry_run=args.dry_run,
         )
+    return True
 
 
 def run_deltaproof_round(
@@ -131,7 +134,7 @@ def main(args):
             print(f'Starting self-play round {round_id}', flush=True)
             with timer('round', round=round_id):
                 if 'llm' in experiment:
-                    run_llm_round(
+                    should_continue = run_llm_round(
                         args,
                         config_path,
                         experiment,
@@ -148,9 +151,9 @@ def main(args):
                         round_id,
                         round_dir,
                     )
-                    if not should_continue:
-                        print('All dataset theorems are solved.', flush=True)
-                        break
+                if not should_continue:
+                    print('All dataset theorems are solved.', flush=True)
+                    break
 
 
 if __name__ == '__main__':
