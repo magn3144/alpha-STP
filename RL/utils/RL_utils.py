@@ -572,8 +572,9 @@ class Sampler_base:
             conjecture_target = 0
             conjectures = []
         else:
-            dataset_attempts = attempts_per_round // 2
-            conjecture_target = attempts_per_round // 2 // conjecture_attempts
+            conjecture_budget = int(attempts_per_round * conjecture_fraction)
+            dataset_attempts = attempts_per_round - conjecture_budget
+            conjecture_target = conjecture_budget // conjecture_attempts
             selected_lemmas = self.select(
                 lemmas_to_generate,
                 ray_inference_actors=ray_inference_actors,

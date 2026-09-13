@@ -75,6 +75,8 @@ def get_average_unique_proofs(generated_proofs):
     proof_dict = defaultdict(list)
     for test_info in generated_proofs:
         proof_dict[test_info['lemma_id']].append(test_info['proof'])
+    if not proof_dict:
+        return 0
     sum_unique_proofs = 0
     for lemma_id, proofs in proof_dict.items():
         unique_proofs = len(set(proofs))

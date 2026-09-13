@@ -259,18 +259,17 @@ def _validate_ranges(config, kind):
                     'experiment.llm.attempts_per_round': llm['attempts_per_round'],
                     'experiment.llm.conjecture_attempts': llm['conjecture_attempts'],
                 }
-                if llm['conjecture_fraction'] not in (0, 0.5):
+                if not 0 <= llm['conjecture_fraction'] <= 1:
                     raise ValueError(
-                        'experiment.llm.conjecture_fraction must be 0 or 0.5'
+                        'experiment.llm.conjecture_fraction must be between 0 and 1'
                     )
-                divisor = 2 * llm['conjecture_attempts']
-                if (
-                    llm['conjecture_fraction'] == 0.5
-                    and llm['attempts_per_round'] % divisor != 0
-                ):
+                conjecture_budget = int(
+                    llm['attempts_per_round'] * llm['conjecture_fraction']
+                )
+                if conjecture_budget % llm['conjecture_attempts'] != 0:
                     raise ValueError(
-                        'experiment.llm.attempts_per_round must be divisible '
-                        'by twice conjecture_attempts'
+                        'the conjecture attempt budget must be divisible by '
+                        'experiment.llm.conjecture_attempts'
                     )
         else:
             positive['experiment.samples_per_statement'] = experiment['samples_per_statement']
