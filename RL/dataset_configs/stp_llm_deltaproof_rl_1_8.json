@@ -1,0 +1,6 @@
+[
+    {
+        "dataset_path": "data/dataset/stp_llm_deltaproof_rl_1_8/train.json",
+        "weight": 1
+    }
+]

@@ -1,6 +1,6 @@
 experiment:
   type: rl
-  exp_dir: "${DATA}/runs/stp_llm_2x_l40s"
+  exp_dir: "${DATA}/runs/expert_iteration_llm_2x_l40s"
   dataset_size: 0
   total_rounds: 10
   temperature: 1.0
@@ -12,7 +12,7 @@ experiment:
     dataset_config: "RL/dataset_configs/stp_llm_deltaproof_rl_1_8.json"
     attempts_per_round: 4800
     conjecture_attempts: 16
-    conjecture_fraction: 0.5
+    conjecture_fraction: 0
 
 training:
   max_tune_length: 2048
@@ -25,8 +25,8 @@ training:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
       project: alpha-STP
-      name: llm-stp-2x-l40s
-      tags: [LLM, STP, 2x-L40S]
+      name: llm-expert-2x-l40s
+      tags: [LLM, expert-iteration, 2x-L40S]
 
     seed: 0
     mp: p=f32,c=bfloat16
