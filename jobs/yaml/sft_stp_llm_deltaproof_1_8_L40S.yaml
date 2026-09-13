@@ -1,0 +1,48 @@
+experiment:
+  type: sft
+  run_dir: "${DATA}/runs/sft_stp_llm_deltaproof_1_8_deepseek_coder_1.3b_l40s"
+  train_data: "${DATA}/dataset/stp_llm_deltaproof_sft_1_8_with_conjecturer/train.json"
+  validation_data: "${DATA}/dataset/stp_llm_deltaproof_sft_1_8_with_conjecturer/validation.json"
+  base_model: "data/models/deepseek-coder-1.3b-base"
+
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
+
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deepseek-sft-stp-llm-deltaproof-1-8
+      tags: [deepseek-ai/deepseek-coder-1.3b-base, sft, DeltaProof, STP, 1-8]
+
+    seed: 0
+    mp: p=f32,c=bfloat16
+    train_batch_size: 20
+    model_axis_size: 1
+    num_train_steps: 3893
+    steps_per_eval: 40
+    max_eval_batches: 268
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 20
+    per_device_parallelism: 20
+
+  # Export at steps 487, 974, 1461, 1948, 2435, 2922, 3409, and 3892.
+  save_freq: 487
+  eval_on_first_step: false
+
+  optimizer:
+    learning_rate: 1.0e-5
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    warmup: 389
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0
