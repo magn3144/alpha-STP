@@ -160,15 +160,19 @@ if __name__ == "__main__":
 
     new_ds_conjecture = format_and_deduplicate_conjecture(conjecture_examples, train_ds)
     logging.info(f'Number of new easy to hard examples: {len(new_ds_conjecture)}')
-    if args.conjecturer_only and not new_ds_conjecture:
-        logging.info('No new conjecturer examples. Keeping the previous checkpoint.')
-        preparation_timer.stop('skipped', reason='no_new_conjectures')
-        exit(0)
     if args.conjecturer_only:
         sft_count = min(len(train_ds), args.conjecturer_sft_ratio * len(new_ds_conjecture))
         indices = rng.choice(len(train_ds), size=sft_count, replace=False)
         train_ds = [train_ds[index] for index in indices]
     train_ds += new_ds_conjecture
+    batch_size = load_training_config(args.training_config)['trainer']['train_batch_size']
+    if len(train_ds) < batch_size:
+        preparation_timer.stop('failed', reason='insufficient_training_data')
+        raise ValueError(
+            f'Training dataset has {len(train_ds)} examples '
+            f'({len(new_ds_conjecture)} new conjectures); '
+            f'at least {batch_size} examples are required for one full training batch.'
+        )
 
     wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))
     wandb_config = load_wandb_config(args.training_config)
@@ -209,7 +213,6 @@ if __name__ == "__main__":
     preparation_timer.stop()
 
     # train the actor
-    batch_size = load_training_config(args.training_config)['trainer']['train_batch_size']
     max_iters = max(len(train_ds) * args.epoch // batch_size, 5)
     logging.info(f'Training steps = {max_iters}; warmup steps = {min(max_iters - 1, 5)}')
     train_model(os.path.join(args.save_dir, args.model_name), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'),
