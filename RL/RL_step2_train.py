@@ -160,13 +160,41 @@ if __name__ == "__main__":
 
     new_ds_conjecture = format_and_deduplicate_conjecture(conjecture_examples, train_ds)
     logging.info(f'Number of new easy to hard examples: {len(new_ds_conjecture)}')
+    training_conjectures = new_ds_conjecture
     if args.conjecturer_only:
-        sft_count = min(len(train_ds), args.conjecturer_sft_ratio * len(new_ds_conjecture))
+        pending = []
+        # Round 0 only trains the solver; conjecturer updates start in round 1.
+        if round > 1:
+            previous_dir = os.path.join(os.path.dirname(args.exp_dir), f'round{round - 1}')
+            if not path_exists(os.path.join(previous_dir, args.model_name)):
+                pending = read_file(os.path.join(previous_dir, 'conjecturer_buffer.json'))
+        training_conjectures = list({
+            (example['prompt'], example['target']): example
+            for example in pending + new_ds_conjecture
+        }.values())
+        write_data(
+            json.dumps(training_conjectures),
+            os.path.join(args.exp_dir, 'conjecturer_buffer.json'),
+            no_compression=True,
+        )
+        logging.info(
+            f'Conjecturer buffer: {len(pending)} carried, '
+            f'{len(new_ds_conjecture)} new, {len(training_conjectures)} unique examples.'
+        )
+        sft_count = min(len(train_ds), args.conjecturer_sft_ratio * len(training_conjectures))
         indices = rng.choice(len(train_ds), size=sft_count, replace=False)
         train_ds = [train_ds[index] for index in indices]
-    train_ds += new_ds_conjecture
+    train_ds += training_conjectures
     batch_size = load_training_config(args.training_config)['trainer']['train_batch_size']
     if len(train_ds) < batch_size:
+        if args.conjecturer_only:
+            logging.info(
+                f'Skipping conjecturer training: {len(training_conjectures)} conjectures '
+                f'+ {sft_count} SFT examples = {len(train_ds)} examples; '
+                f'one batch requires {batch_size}. Keeping the previous checkpoint.'
+            )
+            preparation_timer.stop('skipped', reason='insufficient_training_data')
+            exit(0)
         preparation_timer.stop('failed', reason='insufficient_training_data')
         raise ValueError(
             f'Training dataset has {len(train_ds)} examples '
@@ -209,6 +237,11 @@ if __name__ == "__main__":
 
     # save trajectories
     rng.shuffle(train_ds)
+    if args.conjecturer_only:
+        padding_count = -len(train_ds) % batch_size
+        indices = rng.choice(len(train_ds), size=padding_count, replace=True)
+        train_ds += [train_ds[index] for index in indices]
+        logging.info(f'Repeated {padding_count} examples to fill the final training batch.')
     write_data(json.dumps(train_ds), os.path.join(args.save_dir, 'train_ds.json'), 'json', no_compression=True)
     preparation_timer.stop()
 
