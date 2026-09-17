@@ -283,12 +283,13 @@ def train(config: TrainArgs):
             trainer.add_hook(record_benchmark_step, every=1)
         logger.info("Creating trainer state.")
         state = trainer.initial_state(training_key, model=model)
+        del model
         logger.info("Done.")
 
         if int(state.step) != 0:
             logger.info(f"Resuming training from step {state.step}")
             for i in range(state.step):
-                next(loader)  # type: ignore
+                next(train_loader)
 
         # We also save HF checkpoints periodically (and at the end of training).
         if config.hf_save_path is not None:

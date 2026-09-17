@@ -13,6 +13,10 @@ def main(args):
     experiment = config['experiment']
     training = config['training']
     run_dir = Path(experiment['run_dir'])
+    if args.resume_run_id:
+        training['trainer']['id'] = args.resume_run_id
+        training['trainer']['load_checkpoint'] = True
+        training['trainer']['load_checkpoint_path'] = str(run_dir / 'checkpoints' / args.resume_run_id)
     base_model = Path(experiment['base_model'])
     train_data = Path(experiment['train_data'])
     validation_data = Path(experiment['validation_data'])
@@ -55,6 +59,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run supervised fine-tuning with Levanter.')
     parser.add_argument('--config', required=True)
+    parser.add_argument('--resume-run-id', help='Resume an existing run, requiring its saved checkpoint.')
     parser.add_argument('--cache-only', action='store_true')
     parser.add_argument('--no-eval', action='store_true', help='Train without an evaluation split.')
     parser.add_argument('--dry-run', action='store_true')
