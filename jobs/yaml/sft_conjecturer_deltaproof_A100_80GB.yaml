@@ -1,0 +1,52 @@
+experiment:
+  type: sft
+  run_dir: "${DATA}/runs/sft_conjecturer_deltaproof_deepseek_coder_1.3b_a100"
+  train_data: "${DATA}/runs/sft_conjecturer_deltaproof_deepseek_coder_1.3b_a100/input/train.json"
+  validation_data: "${DATA}/runs/sft_conjecturer_deltaproof_deepseek_coder_1.3b_a100/input/validation.json"
+  base_model: "${DATA}/runs/sft_conjecturer_deepseek_coder_1.3b_a100/models/9w7a7leb/step-2563"
+
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
+
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deepseek-sft-conjecturer-deltaproof-cap5
+      tags: [deepseek-ai/deepseek-coder-1.3b-base, sft, conjecturer, deltaproof, cap5, A100-80GB]
+
+    seed: 42
+    mp: p=f32,c=bfloat16
+    # Batch 20 at length 2048 completed on a 48GB L40S (job 29315737).
+    train_batch_size: 20
+    model_axis_size: 1
+    # 1,393 capped examples: 69 full batches; final 13 examples are dropped.
+    num_train_steps: 69
+    # Evaluate all 130 validation examples in batches of 10 every 10 steps.
+    steps_per_eval: 10
+    max_eval_batches: 13
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 10
+    per_device_parallelism: 20
+
+  # Save only at the end of the 69-step run.
+  save_freq: 69
+  eval_on_first_step: true
+
+  optimizer:
+    # Continue from the SFT model with a fresh optimizer and a lower learning rate.
+    learning_rate: 2.0e-6
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    warmup: 4
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0

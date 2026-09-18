@@ -13,6 +13,8 @@ def main(args):
     experiment = config['experiment']
     training = config['training']
     run_dir = Path(experiment['run_dir'])
+    if training['save_freq'] == training['trainer']['num_train_steps']:
+        training['trainer']['checkpointer'] = {'save_interval': '0s', 'keep': []}
     if args.resume_run_id:
         training['trainer']['id'] = args.resume_run_id
         training['trainer']['load_checkpoint'] = True

@@ -302,8 +302,8 @@ def _validate_ranges(config, kind):
             raise ValueError('training.optimizer.stable and cooldown must be nonnegative')
     if kind == 'sft' and optimizer['warmup'] < 0:
         raise ValueError('training.optimizer.warmup must be nonnegative')
-    if kind == 'sft' and training['save_freq'] >= trainer['num_train_steps']:
-        raise ValueError('training.save_freq must be less than trainer.num_train_steps')
+    if kind == 'sft' and training['save_freq'] > trainer['num_train_steps']:
+        raise ValueError('training.save_freq must not exceed trainer.num_train_steps')
     if kind != 'sft' and config['experiment']['dataset_size'] < 0:
         raise ValueError('experiment.dataset_size must be nonnegative')
     if kind == 'rl' and 'deltaproof' in config['experiment']:
