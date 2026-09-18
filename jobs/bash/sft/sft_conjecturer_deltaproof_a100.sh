@@ -11,7 +11,7 @@
 #BSUB -oo jobs/logs/sft_conjecturer_deltaproof_%J.out
 #BSUB -eo jobs/logs/sft_conjecturer_deltaproof_%J.err
 
-source "$LS_SUBCWD/jobs/common.sh"
+source "$LS_SUBCWD/jobs/bash/common.sh"
 
 # Keep a shuffled input copy and isolated tokenization caches for this run.
 python - <<'PYTHON'
@@ -33,4 +33,4 @@ shutil.copyfile(source / 'metadata.json', output / 'source_metadata.json')
 PYTHON
 
 python -u RL/run_sft.py \
-    --config jobs/yaml/sft_conjecturer_deltaproof_A100_80GB.yaml
+    --config jobs/yaml/sft/sft_conjecturer_deltaproof_A100_80GB.yaml

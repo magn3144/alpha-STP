@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-: "${LS_SUBCWD:?Submit jobs from the repository root with bsub < jobs/cache_sft.sh}"
+: "${LS_SUBCWD:?Submit jobs from the repository root with bsub < jobs/bash/build_cache_sft.sh}"
 cd "$LS_SUBCWD"
 
 module load python3/3.10.18
@@ -24,5 +24,5 @@ export TOKENIZERS_PARALLELISM=false
 
 python --version
 python -u RL/run_sft.py \
-    --config jobs/yaml/sft_L40S.yaml \
+    --config jobs/yaml/sft/sft_L40S.yaml \
     --cache-only

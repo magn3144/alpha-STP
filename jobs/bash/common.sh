@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-: "${LS_SUBCWD:?Submit jobs from the repository root with bsub < jobs/JOB.sh}"
+: "${LS_SUBCWD:?Submit jobs from the repository root with a script under jobs/bash}"
 cd "$LS_SUBCWD"
 
 module load python3/3.10.18

@@ -10,10 +10,10 @@
 #BSUB -oo jobs/logs/rl_llm_expert_%J.out
 #BSUB -eo jobs/logs/rl_llm_expert_%J.err
 
-source "$LS_SUBCWD/jobs/common.sh"
+source "$LS_SUBCWD/jobs/bash/common.sh"
 
 start_round="${START_ROUND:-0}"
 
 python -u RL/run_rl_steps.py \
-    --config jobs/yaml/rl_llm_expert_2x_L40S.yaml \
+    --config jobs/yaml/2xL40S/rl_llm_expert_2x_L40S.yaml \
     --start-round "$start_round"

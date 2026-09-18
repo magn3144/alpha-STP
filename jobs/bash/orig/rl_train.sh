@@ -10,7 +10,7 @@
 #BSUB -oo jobs/logs/rl_train_%J.out
 #BSUB -eo jobs/logs/rl_train_%J.err
 
-source "$LS_SUBCWD/jobs/common.sh"
+source "$LS_SUBCWD/jobs/bash/common.sh"
 
 base_model=deepseek-ai/DeepSeek-Prover-V1.5-SFT
 

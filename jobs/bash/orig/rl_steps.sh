@@ -10,7 +10,7 @@
 #BSUB -oo jobs/logs/rl_steps_%J.out
 #BSUB -eo jobs/logs/rl_steps_%J.err
 
-source "$LS_SUBCWD/jobs/common.sh"
+source "$LS_SUBCWD/jobs/bash/common.sh"
 
 python -u RL/run_rl_steps.py \
     --config jobs/yaml/rl_2x_A100_40gb.yaml

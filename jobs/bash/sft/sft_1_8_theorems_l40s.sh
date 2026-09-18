@@ -10,7 +10,7 @@
 #BSUB -oo jobs/logs/sft_1_8_theorems_l40s_%J.out
 #BSUB -eo jobs/logs/sft_1_8_theorems_l40s_%J.err
 
-source "$LS_SUBCWD/jobs/common.sh"
+source "$LS_SUBCWD/jobs/bash/common.sh"
 
 python -u RL/run_sft.py \
-    --config jobs/yaml/sft_1_8_theorems_L40S.yaml
+    --config jobs/yaml/sft/sft_1_8_theorems_L40S.yaml

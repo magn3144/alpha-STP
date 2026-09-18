@@ -10,12 +10,12 @@
 #BSUB -oo jobs/logs/rl_deltaproof_expert_%J.out
 #BSUB -eo jobs/logs/rl_deltaproof_expert_%J.err
 
-source "$LS_SUBCWD/jobs/common.sh"
+source "$LS_SUBCWD/jobs/bash/common.sh"
 module load cuda/12.6.3
 export DELTA_PROOF="${DELTA_PROOF:-$LS_SUBCWD/../delta-proof}"
 
 start_round="${START_ROUND:-0}"
 
 python -u RL/run_rl_steps.py \
-    --config jobs/yaml/rl_deltaproof_expert_2x_L40S.yaml \
+    --config jobs/yaml/2xL40S/rl_deltaproof_expert_2x_L40S.yaml \
     --start-round "$start_round"
