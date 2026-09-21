@@ -1,7 +1,7 @@
 import json
 import time
 import uuid
-from collections import Counter
+from collections import Counter, deque
 from pathlib import Path
 
 import wandb
@@ -29,6 +29,9 @@ class ConjectureMetrics:
             dir=str(experiment_dir),
             config=config,
         )
+        self.run.define_metric('actor/game')
+        self.run.define_metric('actor/*', step_metric='actor/game')
+        self.run.define_metric('inference/*')
         self.metadata = {'conjecturer_model': str(model)}
         self.metrics = {**dict.fromkeys([
             'generated', 'distinct_new', 'lean_checked', 'lean_passed',
@@ -47,8 +50,90 @@ class ConjectureMetrics:
         self.completed = Counter()
         self.solved = Counter()
         self.results = {}
+        self.reward_window = config['deltaproof']['rl']['reward_window']
+        self.actor_games = 0
+        self.recent_successes = deque(maxlen=self.reward_window)
+        self.recent_rewards = deque(maxlen=self.reward_window)
+        self.proved_theorems = set()
+        self._load_actor_history()
         self.last_log = 0
         self.log(force=True)
+
+    def _load_actor_history(self):
+        for previous_round in range(self.round_id):
+            path = (
+                self.round_dir.parent
+                / f'round{previous_round}'
+                / 'deltaproof_results.jsonl'
+            )
+            if not path.is_file():
+                continue
+            with path.open(encoding='utf-8') as results_file:
+                results = [json.loads(line) for line in results_file if line.strip()]
+            for result in sorted(results, key=lambda item: item['completion_index']):
+                self._update_actor_state(result)
+
+    def _update_actor_state(self, result):
+        success = int(result['status'] == 'proved')
+        reward = result['episode_reward']
+        self.actor_games += 1
+        self.recent_successes.append(success)
+        if reward is not None:
+            self.recent_rewards.append(reward)
+        if success:
+            self.proved_theorems.add(result['theorem_id'])
+        return success, reward
+
+    def log_alphaproof(self, results, inference):
+        for result in sorted(results, key=lambda item: item['completion_index']):
+            success, reward = self._update_actor_state(result)
+            timings = result['timings']
+            metrics = {
+                'actor/game': self.actor_games,
+                'actor/success': success,
+                'actor/rolling_success_rate': (
+                    sum(self.recent_successes) / len(self.recent_successes)
+                ),
+                'actor/unique_theorems_proved': len(self.proved_theorems),
+                'actor/num_simulations': result['simulations_allocated'],
+                'actor/game_seconds': timings['total_seconds'],
+                'actor/setup_seconds': timings['setup_seconds'],
+                'actor/tactic_generation_seconds': (
+                    timings['tactic_generation']['total_seconds']
+                ),
+                'actor/tactic_execution_seconds': (
+                    timings['tactic_execution']['total_seconds']
+                ),
+                'actor/internal_action_seconds': (
+                    timings['internal_actions']['total_seconds']
+                ),
+            }
+            final_verification = timings['final_verification']
+            if final_verification is not None:
+                metrics['actor/final_verification_seconds'] = (
+                    final_verification['seconds']
+                )
+            if reward is not None:
+                metrics['actor/episode_reward'] = reward
+            if self.recent_rewards:
+                metrics['actor/rolling_average_reward'] = (
+                    sum(self.recent_rewards) / len(self.recent_rewards)
+                )
+            self.run.log(metrics)
+
+        for batch_size in inference['batch_sizes']:
+            self.run.log({'inference/batch_size': batch_size})
+        request_count = inference['request_count']
+        self.run.log({
+            'actor/game': self.actor_games,
+            'actor/inference_batches': inference['batch_count'],
+            'actor/inference_average_batch_size': inference['average_batch_size'],
+            'actor/inference_average_queue_wait_seconds': (
+                inference['queue_wait_seconds'] / request_count
+                if request_count else 0.0
+            ),
+            'actor/inference_model_seconds': inference['model_seconds'],
+        })
 
     def log(self, force=False):
         now = time.monotonic()

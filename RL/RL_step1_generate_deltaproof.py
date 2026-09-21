@@ -281,6 +281,7 @@ def run_round(args, config, round_dir, progress):
     round_id = progress.round_id
     configure_timing(round_dir, round_id=round_id)
     results_path = os.path.join(round_dir, 'deltaproof_results.jsonl')
+    inference_metrics_path = os.path.splitext(results_path)[0] + '_metrics.json'
 
     dataset = load_deltaproof_dataset(
         deltaproof['dataset_path'],
@@ -378,7 +379,9 @@ def run_round(args, config, round_dir, progress):
     ]
     for lean_import in deltaproof['imports']:
         inference_args.extend(['--import', lean_import])
-    if not os.path.isfile(results_path) or not os.path.isfile(transitions_path):
+    if not all(os.path.isfile(path) for path in (
+        results_path, transitions_path, inference_metrics_path,
+    )):
         with timer('deltaproof_inference'):
             run_external_python(
                 deltaproof['python'],
@@ -422,6 +425,8 @@ def run_round(args, config, round_dir, progress):
     rejected = [result for result in results if result['status'] == 'rejected']
     if rejected:
         raise ValueError(f'DeltaProof rejected {len(rejected)} scheduled theorems.')
+    with open(inference_metrics_path, encoding='utf-8') as metrics_file:
+        progress.log_alphaproof(results, json.load(metrics_file))
     for result in results:
         progress.record_result(result)
     progress.log(force=True)
