@@ -17,11 +17,11 @@ def run_python(script, *args, cwd=RL_DIR, env=None, dry_run=False):
         subprocess.run(command, cwd=cwd, env=env, check=True)
 
 
-def run_external_python(python, module, *args, cwd, env=None, dry_run=False, progress=None):
+def run_external_python(python, module, *args, cwd, env=None, dry_run=False, stream=None):
     command = [str(python), '-u', '-m', module, *(str(arg) for arg in args)]
     print(f'+ {shlex.join(command)}', flush=True)
     if not dry_run:
-        if progress is None:
+        if stream is None:
             subprocess.run(command, cwd=cwd, env=env, check=True)
             return
         with subprocess.Popen(
@@ -30,10 +30,7 @@ def run_external_python(python, module, *args, cwd, env=None, dry_run=False, pro
             try:
                 assert process.stdout is not None
                 for line in process.stdout:
-                    if line.startswith('CONJECTURE_PROGRESS '):
-                        progress.record_result(json.loads(line.removeprefix('CONJECTURE_PROGRESS ')))
-                    else:
-                        print(line, end='', flush=True)
+                    stream.record_event(json.loads(line))
                 returncode = process.wait()
                 if returncode:
                     raise subprocess.CalledProcessError(returncode, command)

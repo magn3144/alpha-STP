@@ -128,11 +128,14 @@ class ConjectureMetrics:
                 )
             self.run.log(metrics)
 
+        if inference is None:
+            return
         request_count = inference['request_count']
         self.run.log({
             'round': self.round_id,
             'actor/game': self.actor_games,
-            'inference/batch_sizes': wandb.Histogram(inference['batch_sizes']),
+            **({'inference/batch_sizes': wandb.Histogram(inference['batch_sizes'])}
+               if inference['batch_sizes'] else {}),
             'actor/inference_batches': inference['batch_count'],
             'actor/inference_average_batch_size': inference['average_batch_size'],
             'actor/inference_average_queue_wait_seconds': (
@@ -204,17 +207,19 @@ class ConjectureMetrics:
         self.expected = Counter(
             item['theorem_id'] for item in requests if item['source'] == 'conjecture'
         )
+        self.metrics['solver_attempts_expected'] = len(requests)
         self.metrics['attempts_expected'] = sum(self.expected.values())
         self.metadata['solver_run_dir'] = str(solver_run_dir)
         self.log(force=True)
 
-    def record_result(self, result):
+    def record_result(self, result, log=True):
         request_id = result['request_id']
         status = result['status']
         if request_id in self.results:
             assert self.results[request_id] == status
             return
         self.results[request_id] = status
+        self.metrics['solver_attempts_completed'] = len(self.results)
         request = self.requests[request_id]
         if request['source'] != 'conjecture':
             return
@@ -242,7 +247,8 @@ class ConjectureMetrics:
             self.metrics[bucket + '_fraction'] = (
                 self.metrics[bucket] / len(finished) if finished else None
             )
-        self.log()
+        if log:
+            self.log()
 
     def save(self, round_metrics):
         for lemma_id, record in self.by_lemma.items():

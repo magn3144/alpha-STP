@@ -12,6 +12,7 @@ from ray.util import ActorPool
 
 from utils.config_utils import load_experiment_config
 from utils.conjecture_metrics import ConjectureMetrics
+from utils.deltaproof_stream import DeltaProofJournal
 from utils.deltaproof_utils import (
     apply_results,
     build_requests,
@@ -331,21 +332,39 @@ def run_round(args, config, round_dir, progress):
         Path(round_dir, 'experiment_complete').touch()
         return
 
+    selection_path = Path(round_dir) / 'deltaproof_conjectures.json'
     if round_id > 0 and deltaproof['conjecture_fraction']:
-        init_ray_cluster()
-        with timer('conjecture_generation'):
-            conjectures = generate_conjectures(
-                sampler,
-                args.model,
-                dataset,
-                conjecture_target,
-                config,
-                round_dir,
-                args.seed,
-                progress,
-            )
-        ray.shutdown()
-        gc.collect()
+        if selection_path.is_file():
+            selection = json.loads(selection_path.read_text(encoding='utf-8'))
+            conjectures = selection['conjectures']
+            progress.records = selection['records']
+            progress.metrics.update(selection['metrics'])
+            progress.by_lemma = {
+                record['lemma_id']: record for record in progress.records
+                if record['distinct_new']
+            }
+        else:
+            init_ray_cluster()
+            with timer('conjecture_generation'):
+                conjectures = generate_conjectures(
+                    sampler,
+                    args.model,
+                    dataset,
+                    conjecture_target,
+                    config,
+                    round_dir,
+                    args.seed,
+                    progress,
+                )
+            ray.shutdown()
+            gc.collect()
+            temporary = selection_path.with_suffix('.json.tmp')
+            temporary.write_text(json.dumps({
+                'conjectures': conjectures,
+                'records': progress.records,
+                'metrics': progress.metrics,
+            }), encoding='utf-8')
+            temporary.replace(selection_path)
     requests, test_infos = build_requests(
         dataset_theorems,
         conjectures,
@@ -361,14 +380,37 @@ def run_round(args, config, round_dir, progress):
         write_jsonl(requests_path, requests)
 
     run_dir = Path(experiment['exp_dir']) / 'deltaproof'
-    if not (run_dir / 'checkpoints' / 'latest.pt').is_file():
+    if round_id == 0:
         run_dir = Path(rl['sft_run_dir'])
     progress.set_requests(requests, run_dir)
+    journal = DeltaProofJournal(round_dir, requests, progress)
+    unfinished = [
+        request for request in requests if request['request_id'] not in journal.results
+    ]
+    pending_path = Path(round_dir) / 'deltaproof_pending_requests.jsonl'
+    write_jsonl(pending_path, unfinished)
+    if unfinished:
+        # Learner training starts only after generation; reject a changed checkpoint
+        # if a partially completed round is restarted with different model files.
+        checkpoint_paths = [run_dir / 'network_params.pt'] if round_id == 0 else [
+            run_dir / 'checkpoints' / 'latest.pt',
+            *sorted((run_dir / 'checkpoints').glob('step_*.pt'))[-1:],
+        ]
+        checkpoint = [
+            [str(path.resolve()), path.stat().st_size, path.stat().st_mtime_ns]
+            for path in checkpoint_paths
+        ]
+        checkpoint_path = Path(round_dir) / 'deltaproof_inference_checkpoint.json'
+        if checkpoint_path.is_file():
+            if json.loads(checkpoint_path.read_text(encoding='utf-8')) != checkpoint:
+                raise ValueError('DeltaProof checkpoint changed while resuming inference.')
+        else:
+            temporary = checkpoint_path.with_suffix('.json.tmp')
+            temporary.write_text(json.dumps(checkpoint), encoding='utf-8')
+            temporary.replace(checkpoint_path)
     inference_args = [
         '--config', Path(args.config).resolve(),
-        '--input', requests_path,
-        '--output', results_path,
-        '--transitions-output', transitions_path,
+        '--input', pending_path,
         '--batch-id', f'round{round_id}',
         '--run-dir', run_dir,
         '--lean-project', deltaproof['lean_project'],
@@ -382,21 +424,19 @@ def run_round(args, config, round_dir, progress):
         '--inference-batch-size', rl['inference_batch_size'],
         '--inference-batch-timeout', rl['inference_batch_timeout'],
         '--seed', args.seed,
-        '--report-progress',
     ]
     for lean_import in deltaproof['imports']:
         inference_args.extend(['--import', lean_import])
-    if not all(os.path.isfile(path) for path in (
-        results_path, transitions_path, inference_metrics_path,
-    )):
+    if unfinished:
         with timer('deltaproof_inference'):
             run_external_python(
                 deltaproof['python'],
                 'alphaproof.inference.infer',
                 *inference_args,
                 cwd=deltaproof['repo_dir'],
-                progress=progress,
+                stream=journal,
             )
+    journal.finalize()
 
     results = read_jsonl(results_path)
     requests_by_id = {request['request_id']: request for request in requests}
@@ -433,9 +473,7 @@ def run_round(args, config, round_dir, progress):
     if rejected:
         raise ValueError(f'DeltaProof rejected {len(rejected)} scheduled theorems.')
     with open(inference_metrics_path, encoding='utf-8') as metrics_file:
-        progress.log_alphaproof(results, json.load(metrics_file))
-    for result in results:
-        progress.record_result(result)
+        progress.log_alphaproof([], json.load(metrics_file))
     progress.log(force=True)
     generated_proofs = apply_results(results, test_infos)
 
