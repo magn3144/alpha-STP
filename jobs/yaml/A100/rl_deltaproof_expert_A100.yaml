@@ -1,6 +1,6 @@
 experiment:
   type: rl
-  exp_dir: "${DATA}/runs/parallel_sampling_deltaproof_codet5p_770m_2x_l40s_1_8"
+  exp_dir: "${DATA}/runs/expert_iteration_deltaproof_codet5p_770m_a100_1_8_run2"
   dataset_size: 0
   total_rounds: 10
   conjecture_multiplier: 10
@@ -20,7 +20,7 @@ experiment:
     attempts_per_round: 4800
     conjecture_attempts: 16
     conjecture_fraction: 0
-    learner_steps_per_round: 0
+    learner_steps_per_round: 500
 
 training:
   max_tune_length: 2048
@@ -33,17 +33,17 @@ training:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
       project: alpha-STP
-      name: deltaproof-sampling-codet5p-770m-1-8
-      tags: [DeltaProof, parallel-sampling, codet5p-770m, NuminaMath, 1-8]
+      name: deltaproof-expert-codet5p-770m-a100-1-8-run2
+      tags: [DeltaProof, expert-iteration, codet5p-770m, NuminaMath, A100-40GB, 1-8]
 
     seed: 0
     mp: p=f32,c=bfloat16
-    train_batch_size: 32
+    train_batch_size: 26
     steps_per_eval: 100
     model_axis_size: 1
     tensor_parallel_axes: [mlp, heads]
-    per_device_eval_parallelism: 16
-    per_device_parallelism: 16
+    per_device_eval_parallelism: 13
+    per_device_parallelism: 13
 
   eval_on_first_step: false
 
@@ -60,7 +60,7 @@ training:
     min_lr_ratio: 1.0
 
 deltaproof:
-  # SFT on 1/8 data, followed by fixed-model parallel sampling.
+  # SFT on 1/8 data, followed by RL initialized from this SFT run.
   sft:
     train_input: data/dataset/sft_1_8/train.jsonl
     validation_input: data/dataset/sft_1_8/validation.jsonl
@@ -88,13 +88,13 @@ deltaproof:
 
   rl:
     num_simulations: 64
-    batch_size: 10
-    gradient_accumulation_steps: 1
-    num_actors: 192
+    batch_size: 5
+    gradient_accumulation_steps: 2
+    num_actors: 96
     num_games_per_actor: 500  # Unused by STP + DeltaProof.
-    max_concurrent_lean_imports: 32
-    inference_num_gpus: 2
-    inference_batch_size: 60
+    max_concurrent_lean_imports: 24
+    inference_num_gpus: 1
+    inference_batch_size: 24
     inference_batch_timeout: 0.05
     num_sampled_actions: 6
     tactic_timeout: 1.0
