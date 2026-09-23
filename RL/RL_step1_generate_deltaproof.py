@@ -92,7 +92,10 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         rl['final_check_timeout'],
     )
     pool = ActorPool(workers)
-    validation_inputs = [candidate | {'proof': ' sorry'} for candidate in distinct]
+    validation_inputs = [
+        candidate | {'statement': candidate['statement'] + ' sorry', 'proof': ''}
+        for candidate in distinct
+    ]
     blocks = [
         validation_inputs[index:index + TEST_BATCH_SIZE]
         for index in range(0, len(validation_inputs), TEST_BATCH_SIZE)
@@ -108,7 +111,11 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         progress.validation_progress(results)
     for worker in workers:
         ray.kill(worker)
-    valid = [result for result in validation_results if result.get('pass', False)]
+    valid_ids = {
+        result['lemma_id']
+        for result in validation_results if result.get('pass', False)
+    }
+    valid = [candidate for candidate in distinct if candidate['lemma_id'] in valid_ids]
     if len(valid) < target:
         raise ValueError(
             f'Only {len(valid)} valid distinct conjectures were generated; '

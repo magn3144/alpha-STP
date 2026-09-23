@@ -22,7 +22,7 @@ class ConjectureMetrics:
         self.run = wandb.init(
             entity=tracker['entity'],
             project=tracker['project'],
-            name=tracker['name'] + '-conjecturer-metrics',
+            name=tracker['name'] + '-metrics',
             tags=tracker['tags'],
             id=run_id_path.read_text(encoding='utf-8').strip(),
             resume='allow',
@@ -31,7 +31,14 @@ class ConjectureMetrics:
         )
         self.run.define_metric('actor/game')
         self.run.define_metric('actor/*', step_metric='actor/game')
-        self.run.define_metric('inference/*')
+        self.run.define_metric('learner/step')
+        self.run.define_metric('train/*', step_metric='learner/step')
+        self.run.define_metric('replay_validation/*', step_metric='learner/step')
+        self.run.define_metric('replay_validation/loss', step_metric='learner/step')
+        self.run.define_metric('replay/*', step_metric='learner/step')
+        self.run.define_metric('round')
+        self.run.define_metric('conjecturer/*', step_metric='round')
+        self.run.define_metric('inference/*', step_metric='round')
         self.metadata = {'conjecturer_model': str(model)}
         self.metrics = {**dict.fromkeys([
             'generated', 'distinct_new', 'lean_checked', 'lean_passed',
@@ -121,11 +128,11 @@ class ConjectureMetrics:
                 )
             self.run.log(metrics)
 
-        for batch_size in inference['batch_sizes']:
-            self.run.log({'inference/batch_size': batch_size})
         request_count = inference['request_count']
         self.run.log({
+            'round': self.round_id,
             'actor/game': self.actor_games,
+            'inference/batch_sizes': wandb.Histogram(inference['batch_sizes']),
             'actor/inference_batches': inference['batch_count'],
             'actor/inference_average_batch_size': inference['average_batch_size'],
             'actor/inference_average_queue_wait_seconds': (
