@@ -1,6 +1,6 @@
 experiment:
   type: rl
-  exp_dir: "${DATA}/runs/stp_deltaproof_codet5p_770m_l40s_1_8"
+  exp_dir: "${DATA}/runs/stp_deltaproof_codet5p_770m_l40s_1_8_run2"
   dataset_size: 0
   total_rounds: 10
   conjecture_multiplier: 10
@@ -33,7 +33,7 @@ training:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
       project: alpha-STP
-      name: deltaproof-stp-codet5p-770m-l40s-1-8
+      name: deltaproof-stp-codet5p-770m-l40s-1-8-run2
       tags: [DeltaProof, STP, codet5p-770m, NuminaMath, L40S, 1-8]
 
     seed: 0
