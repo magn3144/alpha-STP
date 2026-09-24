@@ -12,6 +12,7 @@
 - When I simply ask you a question, just answer the question without changing anything.
 - There should be a yaml file and bash script for each main experiment (like running sft on an A100 40gb or the STP RL loop). Temporary experiments like batch size validation dont need a yaml.
 - This repo is a fork of the research project https://github.com/kfdong/STP. I want to keep the code as close to the original as possible in order to reproduce their results on a smaller scale with GPUs.
+- The STP and AlphaProof papers are in the "documents" folder in the repo.
 
 
 # Design Choices
