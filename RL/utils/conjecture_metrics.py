@@ -87,7 +87,7 @@ class ConjectureMetrics:
         self.recent_successes.append(success)
         if reward is not None:
             self.recent_rewards.append(reward)
-        if success:
+        if success and result['source'] == 'dataset':
             self.proved_theorems.add(result['theorem_id'])
         return success, reward
 
