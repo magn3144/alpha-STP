@@ -379,9 +379,12 @@ def run_round(args, config, round_dir, progress):
     else:
         write_jsonl(requests_path, requests)
 
-    run_dir = Path(experiment['exp_dir']) / 'deltaproof'
-    if round_id == 0:
-        run_dir = Path(rl['sft_run_dir'])
+    uses_sft_solver = round_id == 0 or not deltaproof['learner_steps_per_round']
+    run_dir = (
+        Path(rl['sft_run_dir'])
+        if uses_sft_solver
+        else Path(experiment['exp_dir']) / 'deltaproof'
+    )
     progress.set_requests(requests, run_dir)
     journal = DeltaProofJournal(round_dir, requests, progress)
     unfinished = [
@@ -392,7 +395,7 @@ def run_round(args, config, round_dir, progress):
     if unfinished:
         # Learner training starts only after generation; reject a changed checkpoint
         # if a partially completed round is restarted with different model files.
-        checkpoint_paths = [run_dir / 'network_params.pt'] if round_id == 0 else [
+        checkpoint_paths = [run_dir / 'network_params.pt'] if uses_sft_solver else [
             run_dir / 'checkpoints' / 'latest.pt',
             *sorted((run_dir / 'checkpoints').glob('step_*.pt'))[-1:],
         ]
