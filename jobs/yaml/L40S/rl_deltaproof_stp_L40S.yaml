@@ -43,7 +43,7 @@ training:
     model_axis_size: 1
     tensor_parallel_axes: [mlp, heads]
     per_device_eval_parallelism: 16
-    per_device_parallelism: 16
+    per_device_parallelism: 8
 
   eval_on_first_step: false
 
