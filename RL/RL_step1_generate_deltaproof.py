@@ -96,6 +96,7 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
     validation_inputs = [
         candidate | {'statement': candidate['statement'] + ' sorry', 'proof': ''}
         for candidate in distinct
+        if 'sorry' not in candidate['statement']
     ]
     blocks = [
         validation_inputs[index:index + TEST_BATCH_SIZE]
@@ -472,7 +473,14 @@ def run_round(args, config, round_dir, progress):
         for result in results
     ):
         raise ValueError('DeltaProof transition counts do not match its results.')
-    rejected = [result for result in results if result['status'] == 'rejected']
+    rejected = [
+        result for result in results
+        if result['status'] == 'rejected'
+        and not (
+            result['source'] == 'conjecture'
+            and 'sorry' in requests_by_id[result['request_id']]['theorem'].removesuffix(' sorry')
+        )
+    ]
     if rejected:
         raise ValueError(f'DeltaProof rejected {len(rejected)} scheduled theorems.')
     with open(inference_metrics_path, encoding='utf-8') as metrics_file:
