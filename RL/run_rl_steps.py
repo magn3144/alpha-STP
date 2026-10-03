@@ -23,7 +23,7 @@ def run_llm_round(
     round_dir,
 ):
     llm = experiment['llm']
-    if round_id == 0:
+    if round_id == 0 or experiment['epochs'] == 0:
         model = llm['base_model']
     else:
         model = Path(experiment['exp_dir']) / f'round{round_id - 1}' / 'RL_model'
@@ -45,6 +45,8 @@ def run_llm_round(
         )
     if not args.dry_run and (round_dir / 'experiment_complete').is_file():
         return False
+    if experiment['epochs'] == 0:
+        return True
     with timer('round_training_step', round=round_id):
         run_python(
             RL_DIR / 'RL_step2_train.py',
@@ -131,6 +133,11 @@ def main(args):
     with timer('stp_run'):
         for round_id in range(args.start_round, experiment['total_rounds']):
             round_dir = exp_dir / f'round{round_id}'
+            if (round_dir / 'round_complete').is_file():
+                continue
+            if (round_dir / 'experiment_complete').is_file():
+                print('All dataset theorems are solved.', flush=True)
+                break
             print(f'Starting self-play round {round_id}', flush=True)
             with timer('round', round=round_id):
                 if 'llm' in experiment:
@@ -154,6 +161,8 @@ def main(args):
                 if not should_continue:
                     print('All dataset theorems are solved.', flush=True)
                     break
+                if not args.dry_run:
+                    (round_dir / 'round_complete').touch()
 
 
 if __name__ == '__main__':

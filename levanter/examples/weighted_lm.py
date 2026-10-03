@@ -113,8 +113,7 @@ class SupervisedDataset(Dataset[LmWeightedExample]):
 
             Pos = input_ids.resolve_axis("position")
             loss_mask = hax.arange(Pos) >= ex["source_lens"]
-            targets = hax.roll(input_ids, -1, Pos)
-            loss_mask = loss_mask & (targets != self.tokenizer.pad_token_id)
+            loss_mask = loss_mask & (hax.arange(Pos) < ex["input_lens"] - 1)
 
             yield LmWeightedExample(
                 tokens=input_ids,
@@ -158,11 +157,12 @@ def mk_dataset(data_dir: str, data_cache_dir: str, batch_size: int, tokenizer: t
         return {
             "input_ids": np.array(padded_input_ids),
             "source_lens": np.array(source_lens),
+            "input_lens": np.array([len(ids) for ids in input_ids]),
             "weight": np.array(weights, dtype=np.float32),
         }
 
     dataset = dataset.map_batches(preprocess, batch_size=batch_size, num_cpus=num_cpus_used_by_tokenizer(tokenizer))
-    dataset = dataset.build_or_load_cache(data_cache_dir, await_finished=False)
+    dataset = dataset.build_or_load_cache(os.path.join(data_cache_dir, "input_lens"), await_finished=False)
 
     dataset = SupervisedDataset(dataset, tokenizer)
 

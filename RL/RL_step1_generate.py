@@ -71,7 +71,7 @@ if __name__ == "__main__":
         sampler = Sampler.from_dict(sampler_dict)
     else:
         sampler = Sampler()
-        sampler.init_lemma_mapping(formatted_ds)
+    sampler.init_lemma_mapping(formatted_ds)
 
     if all(
         test_info['lemma_id'] in sampler.succ_lemmas

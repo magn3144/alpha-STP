@@ -15,6 +15,8 @@ def main(args):
     run_dir = Path(experiment['run_dir'])
     if training['save_freq'] == training['trainer']['num_train_steps']:
         training['trainer']['checkpointer'] = {'save_interval': '0s', 'keep': []}
+    if args.run_id:
+        training['trainer']['id'] = args.run_id
     if args.resume_run_id:
         training['trainer']['id'] = args.resume_run_id
         training['trainer']['load_checkpoint'] = True
@@ -36,7 +38,7 @@ def main(args):
         config_file.flush()
 
         cache_name = f'{base_model.name}_{training["max_tune_length"]}'
-        cache_dir = train_data.parent / 'cache' / cache_name
+        cache_dir = train_data.parent / 'cache' / train_data.stem / cache_name
         eval_args = [] if args.no_eval else [
             '--eval_data', validation_data,
             '--eval_data_cache_dir', cache_dir / 'validation',
@@ -61,7 +63,9 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run supervised fine-tuning with Levanter.')
     parser.add_argument('--config', required=True)
-    parser.add_argument('--resume-run-id', help='Resume an existing run, requiring its saved checkpoint.')
+    run_id_group = parser.add_mutually_exclusive_group()
+    run_id_group.add_argument('--run-id', help='Use a fixed run ID for checkpoint paths.')
+    run_id_group.add_argument('--resume-run-id', help='Resume an existing run, requiring its saved checkpoint.')
     parser.add_argument('--cache-only', action='store_true')
     parser.add_argument('--no-eval', action='store_true', help='Train without an evaluation split.')
     parser.add_argument('--dry-run', action='store_true')

@@ -253,7 +253,8 @@ def _validate_ranges(config, kind):
                         'experiment.deltaproof.conjecture_attempts'
                     )
             else:
-                positive['experiment.epochs'] = experiment['epochs']
+                if experiment['epochs'] < 0:
+                    raise ValueError('experiment.epochs must be nonnegative')
                 llm = experiment['llm']
                 positive |= {
                     'experiment.llm.attempts_per_round': llm['attempts_per_round'],
