@@ -77,6 +77,7 @@ class LlamaConfig(HFCompatConfig):
 
     use_bias: bool = False
     use_layer_norm_weight: bool = True
+    rope_theta: float = 10000.0
     rope_scaling: Optional[dict] = None
 
     reference_checkpoint: str = "meta-llama/Llama-2-7b-hf"
@@ -91,6 +92,7 @@ class LlamaConfig(HFCompatConfig):
     Layers = property(lambda self: Axis(name="layers", size=self.num_layers))
     Mlp = property(lambda self: Axis(name="mlp", size=self.intermediate_dim))
     HeadSize = property(lambda self: Axis(name="head_size", size=self.hidden_dim // self.num_heads))
+    rope_base = property(lambda self: self.rope_theta)
 
     def __post_init__(self):
         assert (
@@ -118,6 +120,7 @@ class LlamaConfig(HFCompatConfig):
             activation_function=hf_config.hidden_act,
             initializer_range=hf_config.initializer_range,
             layer_norm_epsilon=hf_config.rms_norm_eps,
+            rope_theta=hf_config.rope_theta,
             rope_scaling=hf_config.rope_scaling,
         )
 
@@ -144,6 +147,7 @@ class LlamaConfig(HFCompatConfig):
             hidden_act=self.activation_function,
             initializer_range=self.initializer_range,
             rms_norm_eps=self.layer_norm_epsilon,
+            rope_theta=self.rope_theta,
             rope_scaling=self.rope_scaling,
             vocab_size=vocab_size,
             **config_overrides,
@@ -288,7 +292,8 @@ class LlamaAttention(StateDictSerializationMixin, eqx.Module):
         v = self.v_proj(x, key=key_v).rearrange((..., "kv_heads", "position", "head_size"))
 
         cos, sin = llama_rotary_pos_emb(
-            self.config.HeadSize, x.resolve_axis("position"), scale=self._rope_scale_factor()
+            self.config.HeadSize, x.resolve_axis("position"), base=self.config.rope_base,
+            scale=self._rope_scale_factor(),
         )
         q, k = _apply_rotary_pos_emb(q, k, cos, sin)
 

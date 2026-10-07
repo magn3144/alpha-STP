@@ -16,4 +16,4 @@ export XLA_PYTHON_CLIENT_MEM_FRACTION=0.95
 
 python -u RL/run_sft.py \
     --config jobs/yaml/sft/sft_stp_full_L40S.yaml \
-    --run-id stpfull20261003
+    --run-id stpfull20261007lr2em7

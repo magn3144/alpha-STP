@@ -35,7 +35,7 @@ training:
   eval_on_first_step: false
 
   optimizer:
-    learning_rate: 5.0e-6
+    learning_rate: 2.0e-7
     weight_decay: 0.0
     beta1: 0.9
     beta2: 0.95
