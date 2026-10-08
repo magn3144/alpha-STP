@@ -8,7 +8,7 @@ experiment:
   sampler: Sampler_base
   conjecture_multiplier: 10
   llm:
-    base_model: "${DATA}/runs/sft_stp_full_deepseek_coder_1.3b_l40s/models/stpfull20261003/step-11771"
+    base_model: "${DATA}/runs/sft_stp_full_deepseek_coder_1.3b_l40s/models/stpfull20261007lr2em7/step-11771"
     dataset_config: "RL/dataset_configs/stp_llm_deltaproof_rl_1_8.json"
     attempts_per_round: 4800
     conjecture_attempts: 16
