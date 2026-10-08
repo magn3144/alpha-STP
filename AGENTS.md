@@ -22,3 +22,4 @@
 - conjecturer_sft_ratio was added to limit the ratio of sft samples to new generated conjecturer samples in a STP round.
 - Changed how run data and datasets are stored, to make it more organized.
 - Both the deltaproof and llm solver path attempts to solve each theorem from the dataset once, instead of doing 16 attempts per theorem.
+- There are three repos for this project all in the GitHub parent folder: delta-proof with the AlphaProof implementation, alpha-STP with the STP implementation and thesis-latex with the thesis report written in Latex.
