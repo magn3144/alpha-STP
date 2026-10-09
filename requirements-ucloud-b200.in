@@ -1,0 +1,31 @@
+# Linux x86_64, Python 3.10. Run from the repository root.
+# Resolve: uv pip compile requirements-ucloud-b200.in --python-version 3.10 --python-platform x86_64-unknown-linux-gnu --torch-backend cu128 --emit-index-url -o requirements-ucloud-b200.lock
+# B200 requires CUDA >=12.8; vLLM 0.10.2 is built against torch 2.8.0.
+-e ./levanter
+datasets==2.21.0
+easydict
+equinox==0.11.12
+func-timeout==4.3.5
+# First release retaining Fp8Config while supporting newer JAX tree keys.
+haliax==1.4.dev327
+jax[cuda12]==0.5.3
+jaxtyping==0.2.34
+ml-dtypes==0.5.1
+numpy==1.26.4
+optax==0.2.2
+pandas==2.2.2
+psutil==6.0.0
+pyarrow==17.0.0
+pyyaml==6.0.3
+pytz
+ray[default]==2.48.0
+scipy==1.12.0
+tensorstore==0.1.63
+termcolor
+torch==2.8.0+cu128
+tqdm==4.67.1
+transformers==4.55.2
+vllm==0.10.2
+wandb==0.17.5
+# Keep JAX's compiler/toolkit on the same CUDA minor as PyTorch.
+nvidia-cuda-nvcc-cu12==12.8.93

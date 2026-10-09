@@ -181,3 +181,4 @@ data/
 /experiments/
 
 .DS_Store
+.venv-ucloud-b200/
