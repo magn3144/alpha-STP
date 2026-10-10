@@ -24,7 +24,7 @@ assert Path(sys.prefix) == repo / '.venv-ucloud-b200', sys.prefix
 assert torch.__version__ == '2.8.0+cu128', torch.__version__
 assert torch.version.cuda == '12.8', torch.version.cuda
 assert version('vllm') == '0.10.2'
-assert jax.__version__ == '0.5.3'
+assert jax.__version__ == '0.5.0'
 assert torch.cuda.is_available(), 'CUDA is unavailable'
 assert 'sm_100' in torch.cuda.get_arch_list(), torch.cuda.get_arch_list()
 for index in range(torch.cuda.device_count()):
@@ -43,6 +43,10 @@ for device in jax.devices('gpu'):
         x = jnp.ones((32, 32), dtype=jnp.bfloat16)
         result = jax.jit(jnp.matmul)(x, x).block_until_ready()
         assert float(result.sum()) == 32768
+        row, inner, column = (haliax.Axis(name, 32) for name in ('row', 'inner', 'column'))
+        left = haliax.ones((row, inner), dtype=jnp.bfloat16)
+        right = haliax.ones((inner, column), dtype=jnp.bfloat16)
+        assert float(haliax.dot(left, right, axis=inner).array.sum()) == 32768
     print(f'JAX CUDA OK: {device}')
 print(f'B200 imports/kernels OK: Python {sys.version.split()[0]}, '
       f'torch {torch.__version__}, CUDA {torch.version.cuda}, '

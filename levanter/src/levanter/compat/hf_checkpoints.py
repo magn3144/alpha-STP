@@ -274,16 +274,7 @@ class HFCheckpointConverter(Generic[LevConfig]):
         config_class = HFCheckpointConverter._infer_config_class(None, ref, trust_remote_code)
         tokenizer = HFCheckpointConverter._infer_tokenizer(None, ref, trust_remote_code)
 
-        # TODO: this is very hacky, we should add another registry or something
-        # attempt to find the Levanter config class by checking the registry
-        # TODO: hacky hacky
-        for k, v in LmConfig.get_known_choices().items():
-            if issubclass(v, HFCompatConfig):
-                if v().hf_checkpoint_converter().HfConfigClass.__name__ == config_class.__name__:
-                    LevConfigClass = v
-                    break
-        else:
-            raise ValueError(f"No Levanter config found for {config_class}")
+        LevConfigClass = LmConfig.get_choice_class(config_class.model_type)
 
         return HFCheckpointConverter(
             LevConfigClass=LevConfigClass,

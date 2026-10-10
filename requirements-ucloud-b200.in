@@ -8,7 +8,8 @@ equinox==0.11.12
 func-timeout==4.3.5
 # First release retaining Fp8Config while supporting newer JAX tree keys.
 haliax==1.4.dev327
-jax[cuda12]==0.5.3
+# Haliax/Levanter require the einsum API retained through JAX 0.5.0.
+jax[cuda12]==0.5.0
 jaxtyping==0.2.34
 ml-dtypes==0.5.1
 numpy==1.26.4

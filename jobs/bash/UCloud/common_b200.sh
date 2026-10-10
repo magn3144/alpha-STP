@@ -2,6 +2,9 @@
 
 set -euo pipefail
 
+# Keep the vendored JAX/Haliax stack on CUDA cuBLAS GEMMs for Blackwell.
+export XLA_FLAGS="${XLA_FLAGS:-} --xla_gpu_enable_triton_gemm=false"
+
 export UV_PROJECT_ENVIRONMENT="$PWD/.venv-ucloud-b200"
 test -x "$UV_PROJECT_ENVIRONMENT/bin/python"
 source "$UV_PROJECT_ENVIRONMENT/bin/activate"

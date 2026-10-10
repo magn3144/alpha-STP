@@ -1,0 +1,45 @@
+# STP Stage 1: https://github.com/kfdong/STP/blob/main/levanter/config/sft.yaml
+# One B200 uses 256 microbatches of 8 to retain the original global batch 2048.
+experiment:
+  type: sft
+  run_dir: "${DATA}/runs/sft_stp_paper_deepseek_prover_v1.5_b200"
+  train_data: "${DATA}/dataset/stp_paper_sft/mathlib_leanworkbook.json"
+  validation_data: "${DATA}/dataset/stp_paper_sft/eval.json"
+  base_model: "${DATA}/models/DeepSeek-Prover-V1.5-SFT"
+
+training:
+  max_tune_length: 2048
+  trust_remote_code: true
+  trainer:
+    ray:
+      auto_start_cluster: false
+    tracker:
+      type: wandb
+      entity: s204164-danmarks-tekniske-universitet-dtu
+      project: alpha-STP
+      name: deepseek-prover-sft-stp-paper-b200
+      tags: [deepseek-ai/DeepSeek-Prover-V1.5-SFT, sft, STP, B200, paper]
+    seed: 0
+    mp: p=f32,c=bfloat16
+    train_batch_size: 2048
+    model_axis_size: 1
+    num_train_steps: 115
+    steps_per_eval: 10
+    max_eval_batches: 512
+    tensor_parallel_axes: [mlp, heads]
+    per_device_eval_parallelism: 8
+    per_device_parallelism: 8
+  save_freq: 115
+  eval_on_first_step: true
+  optimizer:
+    learning_rate: 1.0e-4
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.95
+    epsilon: 1.0e-5
+    max_grad_norm: 1.0
+    lr_schedule: cosine
+    warmup: 20
+    stable: 0.0
+    cooldown: 0.0
+    min_lr_ratio: 1.0

@@ -13,7 +13,7 @@ def main(args):
     experiment = config['experiment']
     training = config['training']
     run_dir = Path(experiment['run_dir'])
-    if training['save_freq'] == training['trainer']['num_train_steps']:
+    if training['save_freq'] == training['trainer']['num_train_steps'] and not args.training_checkpoints:
         training['trainer']['checkpointer'] = {'save_interval': '0s', 'keep': []}
     if args.run_id:
         training['trainer']['id'] = args.run_id
@@ -66,6 +66,8 @@ if __name__ == '__main__':
     run_id_group = parser.add_mutually_exclusive_group()
     run_id_group.add_argument('--run-id', help='Use a fixed run ID for checkpoint paths.')
     run_id_group.add_argument('--resume-run-id', help='Resume an existing run, requiring its saved checkpoint.')
+    parser.add_argument('--training-checkpoints', action='store_true',
+                        help='Keep Levanter training checkpoints when exporting only the final HF model.')
     parser.add_argument('--cache-only', action='store_true')
     parser.add_argument('--no-eval', action='store_true', help='Train without an evaluation split.')
     parser.add_argument('--dry-run', action='store_true')

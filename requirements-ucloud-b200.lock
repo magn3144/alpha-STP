@@ -222,17 +222,17 @@ idna==3.20
     #   yarl
 interegular==0.3.3
     # via lm-format-enforcer
-jax==0.5.3
+jax==0.5.0
     # via
     #   -r requirements-ucloud-b200.in
     #   chex
     #   equinox
     #   optax
-jax-cuda12-pjrt==0.5.3
+jax-cuda12-pjrt==0.5.0
     # via jax-cuda12-plugin
-jax-cuda12-plugin==0.5.3
+jax-cuda12-plugin==0.5.0
     # via jax
-jaxlib==0.5.3
+jaxlib==0.5.0
     # via
     #   chex
     #   jax
