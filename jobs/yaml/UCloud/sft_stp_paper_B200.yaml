@@ -1,5 +1,7 @@
 # STP Stage 1: https://github.com/kfdong/STP/blob/main/levanter/config/sft.yaml
-# One B200 uses 256 microbatches of 8 to retain the original global batch 2048.
+# Full-length B200 benchmark: 16 fits; 32 OOMs (90% JAX memory pool).
+# Peak live memory is 150.3 GiB, leaving 28.7 GiB of physical headroom.
+# One B200 uses 128 microbatches of 16 to retain the original global batch 2048.
 experiment:
   type: sft
   run_dir: "${DATA}/runs/sft_stp_paper_deepseek_prover_v1.5_b200"
@@ -28,7 +30,7 @@ training:
     max_eval_batches: 512
     tensor_parallel_axes: [mlp, heads]
     per_device_eval_parallelism: 8
-    per_device_parallelism: 8
+    per_device_parallelism: 16
   save_freq: 115
   eval_on_first_step: true
   optimizer:
