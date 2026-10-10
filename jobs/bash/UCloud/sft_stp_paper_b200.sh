@@ -5,6 +5,7 @@ set -euo pipefail
 ENV_SH="$(find /work -maxdepth 3 -type f -path '*/master-thesis/env.sh' -print -quit)"
 test -n "$ENV_SH"
 source "$ENV_SH"
+: "${WANDB_API_KEY:?Set WANDB_API_KEY in $THESIS/wandb.env before submitting the job}"
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 export DATA="$ALPHA_STP/data"
