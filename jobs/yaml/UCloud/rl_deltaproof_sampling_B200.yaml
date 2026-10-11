@@ -5,17 +5,17 @@ experiment:
   total_rounds: 10
   conjecture_multiplier: 10
   deltaproof:
-    conjecturer_model: "${DATA}/runs/sft_conjecturer_deepseek_coder_1.3b_a100/models/9w7a7leb/step-2563"
+    conjecturer_model: "${DATA}/runs/sft_stp_paper_deepseek_prover_v1.5_b200/models/bwmpag9m/step-114"
     vllm_gpu_memory_utilization: 0.85
     conjecturer_temperature: 1.0
     conjecturer_epochs: 1
     repo_dir: "${DELTA_PROOF}"
-    python: "${DELTA_PROOF}/.venv/bin/python"
+    python: "${DELTA_PROOF}/.venv-ucloud-b200/bin/python"
     dataset_path: "${DELTA_PROOF}/data/dataset/numina_math_lean_passing_1_8/train.jsonl"
     lean_project: "${DELTA_PROOF}/lean_project"
     lake_path: "${ELAN_HOME}/bin/lake"
     imports: [Mathlib]
-    attempts_per_round: 4800
+    attempts_per_round: 19200
     conjecture_attempts: 16
     conjecture_fraction: 0
     learner_epochs_per_round: 0
@@ -41,7 +41,7 @@ training:
     model_axis_size: 1
     tensor_parallel_axes: [mlp, heads]
     per_device_eval_parallelism: 16
-    per_device_parallelism: 8
+    per_device_parallelism: 16
 
   eval_on_first_step: false
 
