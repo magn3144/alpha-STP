@@ -30,7 +30,7 @@ from utils.file_utils import cleanup_dir, copy_dir, move_file, read_file, write_
 from utils.model_utils import END_THM, START_LEMMA_STMT
 from utils.prover.lean.verifier import create_ray_lean4_actors, TEST_BATCH_SIZE
 from utils.timing_utils import record_event, timer
-from utils.training_data_utils import get_conjecture_level
+from utils.training_data_utils import get_conjecture_level, select_dataset_theorems
 from utils.config_utils import load_experiment_config
 from concurrent.futures import ProcessPoolExecutor
 
@@ -588,15 +588,10 @@ class Sampler_base:
                     f'{conjecture_target} are required.'
                 )
 
-        dataset_lemmas = {
-            test_info['lemma_id']: test_info
-            for test_info in lemmas_to_generate
-            if test_info['lemma_id'] not in self.succ_lemmas
-        }
-        dataset_lemmas = list(dataset_lemmas.values())
         rng = np.random.default_rng(seed)
-        rng.shuffle(dataset_lemmas)
-        selected_lemmas = dataset_lemmas[:dataset_attempts]
+        selected_lemmas = select_dataset_theorems(
+            lemmas_to_generate, self.succ_lemmas, dataset_attempts, rng,
+        )
         selected_lemmas += conjectures * conjecture_attempts
         logging.info(f'#selected statements = {len(selected_lemmas)}')
         selected_lemmas = deepcopy(selected_lemmas)

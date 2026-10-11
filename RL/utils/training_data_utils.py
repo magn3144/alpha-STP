@@ -1,6 +1,25 @@
-"""Shared STP proof selection, independent of either training environment."""
+"""Shared STP dataset sampling and proof selection."""
+
+from copy import deepcopy
 
 PROVER_PROMPT = 'Complete the following Lean 4 code:\n\n```lean4\nimport Mathlib\nimport Aesop\nset_option maxHeartbeats 0\nopen BigOperators Real Nat Topology Rat\n'
+
+
+def select_dataset_theorems(dataset, solved, count, rng):
+    """Fill the attempt budget with shuffled passes over unsolved theorems."""
+    unsolved = list({
+        item['lemma_id']: item
+        for item in dataset
+        if item['lemma_id'] not in solved
+    }.values())
+    if not unsolved:
+        return []
+    selected = []
+    while len(selected) < count:
+        rng.shuffle(unsolved)
+        selected.extend(unsolved[:count - len(selected)])
+    return [deepcopy(item) for item in selected]
+
 
 def get_conjecture_level(test_info):
     for label in test_info['label']:

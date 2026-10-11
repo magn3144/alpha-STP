@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
 
@@ -27,20 +28,6 @@ def load_deltaproof_dataset(path, dataset_size):
         indices = rng.choice(len(records), dataset_size, replace=False)
         records = [records[index] for index in indices]
     return records
-
-
-def select_dataset_theorems(dataset, solved, count, seed):
-    unsolved = {
-        item['lemma_id']: item
-        for item in dataset
-        if item['lemma_id'] not in solved
-    }
-    unsolved = list(unsolved.values())
-    if not unsolved:
-        return []
-    rng = np.random.default_rng(seed)
-    rng.shuffle(unsolved)
-    return deepcopy(unsolved[:count])
 
 
 def select_conjecture_inputs(sampler, count, seed):
@@ -113,8 +100,11 @@ def normalize_statement(statement):
 def build_requests(dataset_theorems, conjectures, conjecture_attempts, round_id):
     requests = []
     test_infos = {}
+    dataset_attempts = defaultdict(int)
     for test_info in dataset_theorems:
-        add_request(requests, test_infos, test_info, 'dataset', 0, round_id)
+        lemma_id = test_info['lemma_id']
+        add_request(requests, test_infos, test_info, 'dataset', dataset_attempts[lemma_id], round_id)
+        dataset_attempts[lemma_id] += 1
     for test_info in conjectures:
         for attempt in range(conjecture_attempts):
             add_request(

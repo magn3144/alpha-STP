@@ -20,11 +20,11 @@ from utils.deltaproof_utils import (
     load_deltaproof_dataset,
     read_jsonl,
     select_conjecture_inputs,
-    select_dataset_theorems,
     write_jsonl,
 )
 from utils.experiment_utils import run_external_python
 from utils.file_utils import path_exists, read_file, write_data
+from utils.training_data_utils import select_dataset_theorems
 from utils.model_utils import (
     create_embedding_actors,
     create_inference_actors,
@@ -323,7 +323,7 @@ def run_round(args, config, round_dir, progress):
         dataset,
         sampler.succ_lemmas,
         dataset_attempts,
-        args.seed,
+        np.random.default_rng(args.seed),
     )
     if not dataset_theorems and all(
         test_info['lemma_id'] in sampler.succ_lemmas for test_info in dataset
