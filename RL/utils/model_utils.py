@@ -11,12 +11,12 @@ from transformers import AutoTokenizer
 from typing import Any, Dict, List
 from utils.embedding_utils import EmbeddingWorker
 from utils.file_utils import read_file, write_data
+from utils.training_data_utils import PROVER_PROMPT
 
 START_LEMMA_STMT = '<easy theorem>'
 START_THM = '<hard theorem>'
 END_THM = '</hard theorem>'
 INVOKED_LEMMA = '<lemma>'
-PROVER_PROMPT = 'Complete the following Lean 4 code:\n\n```lean4\nimport Mathlib\nimport Aesop\nset_option maxHeartbeats 0\nopen BigOperators Real Nat Topology Rat\n'
 
 __DEBUG__ = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 

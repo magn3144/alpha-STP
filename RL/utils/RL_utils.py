@@ -30,6 +30,7 @@ from utils.file_utils import cleanup_dir, copy_dir, move_file, read_file, write_
 from utils.model_utils import END_THM, START_LEMMA_STMT
 from utils.prover.lean.verifier import create_ray_lean4_actors, TEST_BATCH_SIZE
 from utils.timing_utils import record_event, timer
+from utils.training_data_utils import get_conjecture_level
 from utils.config_utils import load_experiment_config
 from concurrent.futures import ProcessPoolExecutor
 
@@ -352,12 +353,6 @@ def generate_and_test(
             ray.kill(actor)
 
     return generated_proofs_dedup
-
-def get_conjecture_level(test_info):
-    for label in test_info['label']:
-        if label.startswith('conjecture '):
-            return int(label.split()[-1])
-    return 0
 
 def update_succ_rates(generated_proofs, succ_rates):
     proof_results = defaultdict(list)

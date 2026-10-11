@@ -104,8 +104,6 @@ DELTAPROOF_RL_SCHEMA = {
         'deltaproof': {
             'conjecturer_model': str,
             'vllm_gpu_memory_utilization': NUMBER,
-            'conjecturer_sft_dataset': str,
-            'conjecturer_sft_ratio': int,
             'conjecturer_temperature': NUMBER,
             'conjecturer_epochs': int,
             'repo_dir': str,
@@ -117,7 +115,7 @@ DELTAPROOF_RL_SCHEMA = {
             'attempts_per_round': int,
             'conjecture_attempts': int,
             'conjecture_fraction': NUMBER,
-            'learner_steps_per_round': int,
+            'learner_epochs_per_round': int,
         },
     },
     'training': TRAINING_SCHEMA,
@@ -228,16 +226,14 @@ def _validate_ranges(config, kind):
                 deltaproof = experiment['deltaproof']
                 if not 0 < deltaproof['vllm_gpu_memory_utilization'] <= 1:
                     raise ValueError('experiment.deltaproof.vllm_gpu_memory_utilization must be in (0, 1]')
-                if deltaproof['conjecturer_sft_ratio'] < 0:
-                    raise ValueError('experiment.deltaproof.conjecturer_sft_ratio must be nonnegative')
                 positive |= {
                     'experiment.deltaproof.conjecturer_epochs': deltaproof['conjecturer_epochs'],
                     'experiment.deltaproof.attempts_per_round': deltaproof['attempts_per_round'],
                     'experiment.deltaproof.conjecture_attempts': deltaproof['conjecture_attempts'],
                 }
-                if deltaproof['learner_steps_per_round'] < 0:
+                if deltaproof['learner_epochs_per_round'] < 0:
                     raise ValueError(
-                        'experiment.deltaproof.learner_steps_per_round must be nonnegative'
+                        'experiment.deltaproof.learner_epochs_per_round must be nonnegative'
                     )
                 if not 0 <= deltaproof['conjecture_fraction'] <= 1:
                     raise ValueError(

@@ -1,8 +1,9 @@
 import argparse
+import os
 from pathlib import Path
 
 from utils.config_utils import load_experiment_config
-from utils.experiment_utils import RL_DIR, run_external_python, run_python
+from utils.experiment_utils import REPO_DIR, RL_DIR, run_external_python, run_python
 from utils.timing_utils import configure_timing, timer
 
 
@@ -80,19 +81,18 @@ def run_deltaproof_round(
         )
     if not args.dry_run and (round_dir / 'experiment_complete').is_file():
         return False
-    learner_steps = deltaproof['learner_steps_per_round']
-    if learner_steps:
-        transitions_path = round_dir / 'deltaproof_transitions.jsonl'
+    if deltaproof['learner_epochs_per_round']:
+        env = os.environ.copy()
+        env['PYTHONPATH'] = str(deltaproof['repo_dir'])
         with timer('deltaproof_training_step', round=round_id):
             run_external_python(
                 deltaproof['python'],
-                'alphaproof.training.train_transitions',
+                'RL.train_alphaproof',
                 '--config', config_path,
                 '--run-dir', exp_dir / 'deltaproof',
-                '--input', transitions_path,
-                '--batch-id', f'round{round_id}',
-                '--num-steps', learner_steps,
-                cwd=deltaproof['repo_dir'],
+                '--round-dir', round_dir,
+                cwd=REPO_DIR,
+                env=env,
                 dry_run=args.dry_run,
             )
     if round_id > 0 and deltaproof['conjecture_fraction']:
@@ -103,8 +103,6 @@ def run_deltaproof_round(
                 '--exp_dir', round_dir,
                 '--epoch', deltaproof['conjecturer_epochs'],
                 '--training_config', config_path,
-                '--sft_dataset', deltaproof['conjecturer_sft_dataset'],
-                '--conjecturer_sft_ratio', deltaproof['conjecturer_sft_ratio'],
                 '--seed', round_id,
                 '--conjecturer_only',
                 '--model_name', 'conjecturer_model',

@@ -380,7 +380,7 @@ def run_round(args, config, round_dir, progress):
     else:
         write_jsonl(requests_path, requests)
 
-    uses_sft_solver = round_id == 0 or not deltaproof['learner_steps_per_round']
+    uses_sft_solver = round_id == 0 or not deltaproof['learner_epochs_per_round']
     run_dir = (
         Path(rl['sft_run_dir'])
         if uses_sft_solver

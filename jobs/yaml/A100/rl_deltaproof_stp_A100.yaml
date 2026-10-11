@@ -1,14 +1,12 @@
 experiment:
   type: rl
-  exp_dir: "${DATA}/runs/stp_deltaproof_codet5p_770m_a100_1_8_run2"
+  exp_dir: "${DATA}/runs/stp_deltaproof_codet5p_770m_a100_1_8_run2_stp_epochs"
   dataset_size: 0
   total_rounds: 10
   conjecture_multiplier: 10
   deltaproof:
     conjecturer_model: "${DATA}/runs/sft_conjecturer_deepseek_coder_1.3b_a100/models/9w7a7leb/step-2563"
     vllm_gpu_memory_utilization: 0.85
-    conjecturer_sft_dataset: "${DATA}/dataset/conjecturer_sft/train.json"
-    conjecturer_sft_ratio: 5
     conjecturer_temperature: 1.0
     conjecturer_epochs: 1
     repo_dir: "${DELTA_PROOF}"
@@ -20,7 +18,7 @@ experiment:
     attempts_per_round: 4800
     conjecture_attempts: 16
     conjecture_fraction: 0.5
-    learner_steps_per_round: 500
+    learner_epochs_per_round: 1
 
 training:
   max_tune_length: 2048
@@ -105,19 +103,19 @@ deltaproof:
     dtype: float32
     tokenizer_model: data/models/Salesforce--codet5p-770m  # Unused; sft_run_dir/model_source overrides it.
     dataset_dir: data/dataset/numina_math_lean_passing_1_8
-    sft_dataset_path: data/dataset/sft_1_8/train.jsonl
-    sft_fraction: 0.1
+    sft_dataset_path: data/dataset/sft_1_8/train.jsonl  # Unused by the STP-owned trainer.
+    sft_fraction: 0.1  # Unused by the STP-owned trainer.
     disprove_rate: 0.0  # Unused by STP + DeltaProof.
     sft_run_dir: "${DELTA_PROOF}/data/runs/sft_codet5p_770m_a100_full_01"
     max_state_length: 640
     max_action_length: 128
     rollout_max_action_length: 32
-    training_steps: 10000  # Unused; learner_steps_per_round controls training steps.
+    training_steps: 10000  # Unused; learner_epochs_per_round determines the STP step budget.
     training_iterations: 100  # Unused by STP + DeltaProof.
     checkpoint_interval: 500
-    window_size: 250000
+    window_size: 250000  # Unused by the STP-owned trainer.
     value_weight: 0.01
-    validation_fraction: 0.05
+    validation_fraction: 0.05  # Unused by the STP-owned trainer.
     validation_batch_size: 10
     validation_interval: 100
     theorem_validation_interval_games: 2400  # Unused by STP + DeltaProof.

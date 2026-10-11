@@ -15,21 +15,14 @@ from copy import deepcopy
 from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import START_THM, START_LEMMA_STMT, END_THM, INVOKED_LEMMA, PROVER_PROMPT
-from utils.RL_utils import calculate_cumulative_solve_rate, get_conjecture_level, train_model, load_training_config, load_wandb_config
+from utils.RL_utils import calculate_cumulative_solve_rate, train_model, load_training_config, load_wandb_config
 from utils.file_utils import path_exists, read_file, write_data
 from utils.timing_utils import configure_timing, EventTimer
+from utils.training_data_utils import format_data, select_training_proofs
 
 def compute_weight(proof, verify_time = 0):
     return np.exp(-0.001 * len(proof) - 0.01 * verify_time)
     # return np.exp(-0.001 * len(proof))
-
-def format_data(header, statement, proof):
-    if header is not None:
-        prompt = 'Complete the following Lean 4 code:\n\n```lean4\n' + header + statement.strip()
-    else:
-        prompt = f'{PROVER_PROMPT}\n{statement.strip()}'
-    target = proof
-    return (prompt, target)
 
 def format_and_deduplicate_dataset(valid_proofs, replay_buffer, generated_proofs):
     correct_proof_count = {}
@@ -101,7 +94,6 @@ if __name__ == "__main__":
     parser.add_argument("--sft_dataset", type=str, default=None, help="SFT dataset in the training format")
     parser.add_argument("--save_dir", type=str, default=None)
     parser.add_argument("--conjecturer_only", action='store_true')
-    parser.add_argument("--conjecturer_sft_ratio", type=int)
     parser.add_argument("--model_name", default='RL_model')
     args = parser.parse_args()
     if args.save_dir is None:
@@ -116,7 +108,7 @@ if __name__ == "__main__":
         exit(0)
 
     preparation_timer = EventTimer('round_training_preparation')
-    train_ds = read_file(args.sft_dataset)
+    train_ds = [] if args.conjecturer_only else read_file(args.sft_dataset)
     if train_ds is None:
         logging.warning(f"Dataset {args.sft_dataset} contains no data...")
         train_ds = []
@@ -143,13 +135,7 @@ if __name__ == "__main__":
     if args.conjecturer_only:
         new_ds = []
     else:
-        # Dataset statements have one attempt, so only conjectures have a meaningful pass rate.
-        valid_proofs = [
-            test_info
-            for test_info in valid_proofs
-            if get_conjecture_level(test_info) == 0
-            or np.mean(all_test_results[test_info['statement']]) <= 0.5
-        ]
+        valid_proofs = select_training_proofs(generated_proofs, train_ds)
         new_ds = format_and_deduplicate_dataset(valid_proofs, train_ds, generated_proofs)
         if len(new_ds) == 0:
             logging.error(f'[Erorr] No new data generated. Exiting...')
@@ -181,16 +167,13 @@ if __name__ == "__main__":
             f'Conjecturer buffer: {len(pending)} carried, '
             f'{len(new_ds_conjecture)} new, {len(training_conjectures)} unique examples.'
         )
-        sft_count = min(len(train_ds), args.conjecturer_sft_ratio * len(training_conjectures))
-        indices = rng.choice(len(train_ds), size=sft_count, replace=False)
-        train_ds = [train_ds[index] for index in indices]
     train_ds += training_conjectures
     batch_size = load_training_config(args.training_config)['trainer']['train_batch_size']
     if len(train_ds) < batch_size:
         if args.conjecturer_only:
             logging.info(
                 f'Skipping conjecturer training: {len(training_conjectures)} conjectures '
-                f'+ {sft_count} SFT examples = {len(train_ds)} examples; '
+                f'= {len(train_ds)} examples; '
                 f'one batch requires {batch_size}. Keeping the previous checkpoint.'
             )
             preparation_timer.stop('skipped', reason='insufficient_training_data')
