@@ -1,0 +1,4 @@
+interface:
+  display_name: "UCloud"
+  short_description: "Operate UCloud jobs, storage, SSH, and GPU workloads"
+  default_prompt: "Use $ucloud to prepare, run, or diagnose a UCloud job using the official user guide."

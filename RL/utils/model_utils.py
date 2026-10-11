@@ -65,7 +65,8 @@ class LLMPredictor:
 
     def predict(self, batch: Dict[str, List], sampling_params: Any) -> List[Dict]:
         if self.llm is None:
-            self.llm = LLM(model=self.model, dtype='bfloat16', max_model_len = 1024, **self.kwargs)
+            # Fit the existing 1024-token prompt and 1024-token completion budgets together.
+            self.llm = LLM(model=self.model, dtype='bfloat16', max_model_len=2048, **self.kwargs)
         request_params = [sampling_params.clone() for _ in batch['ids']]
         for params, request_id in zip(request_params, batch['ids']):
             params.seed += request_id

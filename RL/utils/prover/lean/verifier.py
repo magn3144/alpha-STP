@@ -4,9 +4,9 @@ import json
 import psutil
 import tempfile
 import subprocess
+import shutil
 from typing import List
 import ray
-from ray._private.utils import hex_to_binary
 from ray._raylet import PlacementGroupID
 from ray.util import placement_group, remove_placement_group
 from ray.util.placement_group import PlacementGroup
@@ -16,7 +16,8 @@ from func_timeout import FunctionTimedOut, func_set_timeout
 __DEBUG__ = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 HOME_DIR = os.path.expanduser('~')
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..'))
-DEFAULT_LAKE_PATH = f'{HOME_DIR}/.elan/bin/lake'
+DEFAULT_LAKE_PATH = shutil.which('lake')
+assert DEFAULT_LAKE_PATH is not None, 'Add the Lean toolchain bin directory to PATH.'
 DEFAULT_LEAN_WORKSPACE = os.path.join(PROJECT_DIR, 'lean/mathlib4')
 DEFAULT_TIMEOUT = 200
 LEAN_HEADER = 'import miniF2F\nimport Aesop\nset_option maxHeartbeats 0\nopen BigOperators Real Nat Topology Rat\n'
@@ -431,7 +432,7 @@ def create_ray_lean4_actors(
         **kwargs,
 ) -> List:
     for pg_id_str in ray.util.placement_group_table():
-        pg_id_bin = PlacementGroupID(hex_to_binary(pg_id_str))
+        pg_id_bin = PlacementGroupID(bytes.fromhex(pg_id_str))
         pg = PlacementGroup(pg_id_bin)
         remove_placement_group(pg)
 

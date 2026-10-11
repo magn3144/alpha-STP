@@ -8,12 +8,24 @@ source "$ENV_SH"
 
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 export DATA="$ALPHA_STP/data"
+# Supply the CPU allocation expected by the existing Ray initializer.
+export LSB_DJOB_NUMPROC="$(python3 -c 'import json; print(json.load(open("/work/JobParameters.json"))["machineType"]["cpu"])')"
+export RAY_TMPDIR=/tmp
+export XLA_PYTHON_CLIENT_MEM_FRACTION=0.9
+export XLA_PJRT_GPU_HOST_MEMORY_LIMIT_GB=128
+export OMP_NUM_THREADS=8
+export RAY_DEFAULT_OBJECT_STORE_MAX_MEMORY_BYTES=8589934592
 
 cd "$ALPHA_STP"
 source jobs/bash/UCloud/common_b200.sh
+
+if [[ "${1:-}" == --smoke-test ]]; then
+    shift
+    exec python -u -m scripts.smoke_stp_llm_ucloud "$@"
+fi
 
 start_round="${START_ROUND:-0}"
 
 python -u RL/run_rl_steps.py \
     --config jobs/yaml/UCloud/rl_llm_stp_B200.yaml \
-    --start-round "$start_round"
+    --start-round "$start_round" "$@"
