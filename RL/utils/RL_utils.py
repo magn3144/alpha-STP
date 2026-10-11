@@ -743,10 +743,11 @@ def train_model(
             'train_data': train_data_path,
             'train_data_cache_dir': os.path.join(data_cache_dir, 'train'),
             'eval_data': os.path.join(DATA, 'dataset/prover_sft/eval.json'),
-            'eval_data_cache_dir': os.path.join(DATA, 'dataset/prover_sft/eval_cache'),
+            'eval_data_cache_dir': os.environ.get('STP_EVAL_DATA_CACHE_DIR', os.path.join(DATA, 'dataset/prover_sft/eval_cache')),
             'model_name_or_path': train_from,
             'tokenizer_name_or_path': train_from,
-            'save_freq': max_iters - 1,
+            # The trainer forces a final export; do not also export on the last step.
+            'save_freq': max_iters,
             'hf_save_path': os.path.join(output_dir, 'hf_checkpoints'),
 
             'optimizer.warmup': min(max_iters - 1, 5),
