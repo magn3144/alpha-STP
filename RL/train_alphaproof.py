@@ -178,8 +178,6 @@ def train_round(args, config, sft_config, epochs, logger):
         step += 1
         storage.save_latest_checkpoint(step, network)
         save_progress(progress_path, {'completed_updates': step - start_step, 'solver_step': step, 'complete': False})
-        if step % config.checkpoint_interval == 0 or step == target:
-            storage.save_checkpoint(step, network)
         if step % config.log_interval == 0 or step == target:
             logger.log_training(step, loss, network.optimizer.param_groups[0]['lr'], None, len(transitions))
         if step % config.validation_interval == 0 and step < target:

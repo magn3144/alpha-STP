@@ -7,6 +7,9 @@ export LSB_DJOB_NUMPROC="$(python3 -c 'import json; print(json.load(open("/work/
 export RAY_TMPDIR=/tmp
 export OMP_NUM_THREADS=8
 export RAY_DEFAULT_OBJECT_STORE_MAX_MEMORY_BYTES=8589934592
+# Bound Lean verification RAM independently of the GPU training batch.
+export STP_LEAN_MEMORY_LIMIT_GB=8
+export STP_LEAN_CPUS_PER_TASK=3
 
 # All UCloud RL LLM components use the same 7B SFT model.
 export STP_EVAL_DATA_CACHE_DIR="$DATA/dataset/prover_sft/eval_cache-deepseek-prover-v1.5"

@@ -38,8 +38,7 @@ BATCH_SIZE = 2048
 prompt_length = 1024
 CONJECTURE_THRESHOLD = 0.25
 NR_FOLD = 5
-EARLY_STOP_THRESHOLD = 0.1
-CPU_PER_TASK = 1.5
+CPU_PER_TASK = float(os.environ.get('STP_LEAN_CPUS_PER_TASK', '1.5'))
 
 __DEBUG__ = os.getenv("DEBUG", 'False').lower() in ('true', '1', 't')
 REPO_DIR = os.path.abspath(os.path.join(__file__, '../../..'))
@@ -188,8 +187,9 @@ def generate_and_test(
     pbar = tqdm(total=len(selected_lemmas))
     finished_generation = False
     verification_start = None
+    verification_errors = []
     
-    def aggregate_results(early_stop_threshold = 0):
+    def collect_results():
         save_interval = 900  # Time interval in seconds (300 seconds = 5 minutes)
         last_save_time = time.time()
         nr_finished_jobs = 0
@@ -197,8 +197,6 @@ def generate_and_test(
         nr_tests_done = 0
         cached_pbar_n = 0
         while tester_pool.has_next() or (not finished_generation):
-            if finished_generation and (total_test_tasks - nr_finished_jobs <= early_stop_threshold):
-                break
             if not tester_pool.has_next():
                 time.sleep(2)
                 continue
@@ -241,10 +239,17 @@ def generate_and_test(
             if finished_generation:
                 pbar.update(cached_pbar_n)
                 cached_pbar_n = 0
-        save_result(test_results, save_file_tests)
+    def aggregate_results():
+        try:
+            try:
+                collect_results()
+            finally:
+                save_result(test_results, save_file_tests)
+        except BaseException as error:
+            verification_errors.append(error)
 
     if generated_proofs_dedup is None:
-        monitoring_thread = threading.Thread(target=aggregate_results, args=(int(len(ray_test_actors) * EARLY_STOP_THRESHOLD),))
+        monitoring_thread = threading.Thread(target=aggregate_results)
         monitoring_thread.daemon = True
         monitoring_thread.start()
 
@@ -253,6 +258,8 @@ def generate_and_test(
         deduplicate_index = {}
         batch_size = (len(selected_lemmas) + NR_FOLD - 1) // NR_FOLD
         for shard in range(NR_FOLD):
+            if verification_errors:
+                raise verification_errors[0]
             logging.debug(f'Processing shard {shard}/{NR_FOLD}...')
             batch = selected_lemmas[batch_size * shard: batch_size * (shard + 1)]
             with timer('network_inference', shard=shard):
@@ -290,6 +297,8 @@ def generate_and_test(
         start_time = time.perf_counter()
         monitoring_thread.join()
         pbar.close()
+        if verification_errors:
+            raise verification_errors[0]
 
         # stage 2 testing
         print('Stage 2: rerunning timed-out jobs...')
@@ -322,6 +331,8 @@ def generate_and_test(
         monitoring_thread.start()
         monitoring_thread.join()
         pbar.close()
+        if verification_errors:
+            raise verification_errors[0]
 
         duration = time.perf_counter() - start_time
         logging.info(f'Testing time: {duration:.3f} seconds')

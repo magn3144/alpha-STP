@@ -1,8 +1,8 @@
 import os
+import signal
 import time
 import json
 import psutil
-import tempfile
 import subprocess
 import shutil
 from typing import List
@@ -24,6 +24,13 @@ LEAN_HEADER = 'import miniF2F\nimport Aesop\nset_option maxHeartbeats 0\nopen Bi
 TEST_BATCH_SIZE = 40
 
 MEMORY_THRESHOLD = 75.0  # Memory usage percentage to trigger waiting
+
+def repl_command(lake_path):
+    command = [lake_path, 'exe', 'repl']
+    if 'STP_LEAN_MEMORY_LIMIT_GB' in os.environ:
+        limit = int(os.environ['STP_LEAN_MEMORY_LIMIT_GB']) * 1024 ** 3
+        command = ['prlimit', f'--as={limit}', '--'] + command
+    return command
 
 def extract_invokes(ast_results):
     premises = ast_results.get('premises', [])
@@ -97,6 +104,8 @@ def read_from_repl(proc):
     ret = ''
     while True:
         line = proc.stdout.readline()
+        if line == '':
+            raise ChildProcessError(f'Lean REPL exited: {proc.stderr.read()}')
         if len(line.strip()) == 0:
             break
         ret += line
@@ -110,14 +119,18 @@ def query_repl(proc, message_str):
 
 @func_set_timeout(DEFAULT_TIMEOUT + 10, allowOverride=True)
 def _start_repl_process(lake_path, lean_workspace, header = None):
-    proc = subprocess.Popen([lake_path, "exe", 'repl'], 
+    proc = subprocess.Popen(repl_command(lake_path),
                                     stdin=subprocess.PIPE,
                                     stdout=subprocess.PIPE, 
                                     stderr=subprocess.PIPE,  # Capture stderr
                                     text=True, 
-                                    cwd=lean_workspace,)
+                                    cwd=lean_workspace, start_new_session=True)
     cmd = json.dumps({"cmd": header or LEAN_HEADER, "allTactics": False, "ast": False, "tactics": False, "premises": False}, ensure_ascii=False) + '\r\n\r\n'
-    query_repl(proc, cmd)
+    try:
+        query_repl(proc, cmd)
+    except BaseException:
+        terminate_repl(proc)
+        raise
     return proc
 
 def start_repl_process(lake_path, lean_workspace, header = None):
@@ -134,12 +147,13 @@ def start_repl_process(lake_path, lean_workspace, header = None):
 
 def start_leantree_repl_process(lake_path, lean_workspace, timeout, header=None):
     proc = subprocess.Popen(
-        [lake_path, 'exe', 'repl'],
+        repl_command(lake_path),
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         cwd=lean_workspace,
+        start_new_session=True,
     )
     command = {'cmd': header or 'import Mathlib', 'allTactics': False}
     try:
@@ -156,47 +170,26 @@ def start_leantree_repl_process(lake_path, lean_workspace, timeout, header=None)
         raise
     return proc
 
-@func_set_timeout(DEFAULT_TIMEOUT, allowOverride=True)
 def terminate_repl(proc):
     if proc is None:
         return
     
     try:
-        # Create a psutil Process instance for the main process
-        parent = psutil.Process(proc.pid)
-        
-        # Retrieve all child processes recursively
-        children = parent.children(recursive=True)
-        
-        # Terminate all child processes
-        for child in children:
-            child.terminate()
-        
-        # Terminate the main process
-        parent.terminate()
-        
-        # Wait for all processes to terminate gracefully
-        gone, alive = psutil.wait_procs([parent] + children, timeout=5)
-        
-        # Force kill any processes that are still alive after the timeout
-        for p in alive:
-            p.kill()
-            
-    except psutil.NoSuchProcess:
-        # The process may have already terminated
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
         pass
-    except Exception as e:
-        # Optionally log the exception if needed
-        # print(f"Error in terminating processes: {e}")
-        pass
+    proc.wait(timeout=5)
+    for stream in (proc.stdin, proc.stdout, proc.stderr):
+        if stream is not None:
+            stream.close()
 
 def verify_lean4_file(codes, headers, lake_path=DEFAULT_LAKE_PATH, lean_workspace=DEFAULT_LEAN_WORKSPACE, last_env=None, verbose=False, 
                       allTactics=False, ast=False, premises=False, tactics=False):
     command = dict(allTactics=allTactics, ast=ast, tactics=tactics, premises=premises)
     
     results = []
+    proc = None
     try:
-        proc = None
         last_header = None
         for code, header in zip(codes, headers):
             if proc is None or header != last_header:
@@ -231,11 +224,12 @@ def verify_lean4_file(codes, headers, lake_path=DEFAULT_LAKE_PATH, lean_workspac
                 terminate_repl(proc)
                 proc = None
 
-        terminate_repl(proc)
     except (Exception, FunctionTimedOut) as e:
         if __DEBUG__:
             print(e)
         results += [{"system_messages": str(e)}] * (len(codes) - len(results))
+    finally:
+        terminate_repl(proc)
 
     assert len(results) == len(codes), f"Results length mismatch: {len(results)} != {len(codes)}"
     return results
@@ -252,18 +246,15 @@ def verify_lean4_file_premises(code, header, lake_path=DEFAULT_LAKE_PATH, lean_w
     start_time = time.perf_counter()
     
     results = []
+    proc = None
     try:
-        with tempfile.TemporaryFile(mode='w+', encoding='utf-8') as temp_file:
-            temp_file.write(message_str + "\r\n\r\n")
-            temp_file.seek(0)
-            outputs = subprocess.run([lake_path, "exe", 'repl'], 
-                                     stdin=temp_file, 
-                                     capture_output=True, 
-                                     text=True, 
-                                     cwd=lean_workspace, 
-                                     timeout=timeout,)
-
-        repl_result = json.loads(outputs.stdout)
+        proc = subprocess.Popen(repl_command(lake_path), stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, cwd=lean_workspace, start_new_session=True)
+        stdout, stderr = proc.communicate(message_str, timeout=timeout)
+        if proc.returncode != 0:
+            raise ChildProcessError(f'Lean REPL exited with status {proc.returncode}: {stderr}')
+        repl_result = json.loads(stdout)
         duration = time.perf_counter() - start_time
         result = get_result_from_repl(repl_result, code, duration, 'premises')
         results.append(result)
@@ -284,6 +275,8 @@ def verify_lean4_file_premises(code, header, lake_path=DEFAULT_LAKE_PATH, lean_w
                 'complete': False,
             }],
         }]
+    finally:
+        terminate_repl(proc)
 
 def verify_leantree_files(codes, headers, lake_path, lean_workspace, timeout):
     results = []
@@ -470,7 +463,7 @@ def create_ray_lean4_actors(
     warmup_path = os.path.join(DEFAULT_LEAN_WORKSPACE, '.lake/packages/REPL/test/aime_1983_p9.in')
     with open(warmup_path, 'r') as warmup_input:
         subprocess.run(
-            [DEFAULT_LAKE_PATH, 'exe', 'repl'],
+            repl_command(DEFAULT_LAKE_PATH),
             cwd=DEFAULT_LEAN_WORKSPACE,
             stdin=warmup_input,
             stdout=subprocess.DEVNULL,
