@@ -3,8 +3,6 @@ import gc
 import ray
 import json
 import pickle
-import random
-import string
 import logging
 import argparse
 import wandb
@@ -19,6 +17,8 @@ from utils.RL_utils import calculate_cumulative_solve_rate, train_model, load_tr
 from utils.file_utils import path_exists, read_file, write_data
 from utils.timing_utils import configure_timing, EventTimer
 from utils.training_data_utils import format_data, select_training_proofs
+from utils.config_utils import load_experiment_config
+from utils.stp_wandb import initialize_run
 
 def compute_weight(proof, verify_time = 0):
     return np.exp(-0.001 * len(proof) - 0.01 * verify_time)
@@ -185,12 +185,11 @@ if __name__ == "__main__":
             f'at least {batch_size} examples are required for one full training batch.'
         )
 
-    wandb_id = ''.join(random.choices(string.ascii_lowercase, k=10))
+    run = initialize_run(load_experiment_config(args.training_config, 'rl'), args.exp_dir)
+    wandb_id = run.id
     wandb_config = load_wandb_config(args.training_config)
     wandb_entity = wandb_config['entity']
     wandb_project = wandb_config['project']
-    wandb_run_name = '-'.join(args.exp_dir.split('/')[-2:])
-    wandb.init(entity=wandb_entity, project=wandb_project, name=wandb_run_name, id=wandb_id, resume="allow")
     logging.info(f'Training dataset size = {len(train_ds)}')
 
     def compute_metric(data, key):
@@ -214,7 +213,7 @@ if __name__ == "__main__":
         'monitoring/unique_invokes_in_proofs': get_unique_invokes_in_proofs(valid_proofs),
         'monitoring/cumulative_solve_rate': calculate_cumulative_solve_rate(sampler['succ_lemmas'], sampler['relevant_lemmas']),
     }
-    wandb.log(metrics)
+    wandb.log({'round': round, **metrics})
     logging.info(str(metrics))
     wandb.finish(quiet=True)
 
@@ -233,4 +232,4 @@ if __name__ == "__main__":
     logging.info(f'Training steps = {max_iters}; warmup steps = {min(max_iters - 1, 5)}')
     train_model(os.path.join(args.save_dir, args.model_name), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'),
                     args, wandb_entity, wandb_project, wandb_id, 'round_network_training',
-                    args.training_config)
+                    args.training_config, shared_wandb=True)

@@ -1,6 +1,5 @@
 import json
 import time
-import uuid
 from collections import Counter, deque
 from pathlib import Path
 
@@ -8,29 +7,14 @@ import wandb
 
 from utils.deltaproof_utils import write_jsonl
 from utils.RL_utils import CONJECTURE_THRESHOLD
+from utils.stp_wandb import initialize_run
 
 
 class ConjectureMetrics:
     def __init__(self, config, round_dir, model):
         self.round_dir = Path(round_dir)
         self.round_id = int(self.round_dir.name.removeprefix('round'))
-        experiment_dir = self.round_dir.parent
-        run_id_path = experiment_dir / 'conjecturer_wandb_id.txt'
-        if not run_id_path.exists():
-            run_id_path.write_text(uuid.uuid4().hex, encoding='utf-8')
-        tracker = config['training']['trainer']['tracker']
-        self.run = wandb.init(
-            entity=tracker['entity'],
-            project=tracker['project'],
-            name=tracker['name'] + '-metrics',
-            tags=tracker['tags'],
-            id=run_id_path.read_text(encoding='utf-8').strip(),
-            resume='allow',
-            dir=str(experiment_dir),
-            config=config,
-        )
-        self.run.define_metric('actor/game')
-        self.run.define_metric('actor/*', step_metric='actor/game')
+        self.run = initialize_run(config, round_dir)
         self.run.define_metric('learner/step')
         self.run.define_metric('train/*', step_metric='learner/step')
         self.run.define_metric('replay_validation/*', step_metric='learner/step')

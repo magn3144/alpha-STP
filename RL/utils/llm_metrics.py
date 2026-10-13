@@ -1,14 +1,12 @@
 import hashlib
 import json
 import time
-import uuid
 from pathlib import Path
-
-import wandb
 
 from utils.file_utils import read_file
 from utils.RL_utils import get_deduplication_key
 from utils.training_data_utils import get_conjecture_level
+from utils.stp_wandb import initialize_run
 
 
 class LLMMetrics:
@@ -29,18 +27,7 @@ class LLMMetrics:
                 proof['lemma_id'] for proof in proofs
                 if proof['complete'] and get_conjecture_level(proof) == 0
             )
-        run_id_path = self.round_dir.parent / 'actor_wandb_id.txt'
-        if not run_id_path.exists():
-            run_id_path.write_text(uuid.uuid4().hex)
-        tracker = config['training']['trainer']['tracker']
-        self.run = wandb.init(
-            entity=tracker['entity'], project=tracker['project'],
-            name=tracker['name'] + '-metrics', tags=tracker['tags'],
-            id=run_id_path.read_text().strip(), resume='allow',
-            dir=str(self.round_dir.parent), config=config,
-        )
-        self.run.define_metric('actor/game')
-        self.run.define_metric('actor/*', step_metric='actor/game')
+        self.run = initialize_run(config, round_dir)
         self.last_log = 0
         self.update([], {}, force=True)
 

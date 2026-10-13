@@ -729,7 +729,8 @@ def train_model(
         wandb_id: str, 
         training_event,
         training_config_path,
-        eval_data_path: Optional[str] = None, 
+        eval_data_path: Optional[str] = None,
+        shared_wandb: bool = False,
 ) -> None:
     model_name = model_dir.split('/')[-1]
     logging.info(f'training {model_name}...')
@@ -764,6 +765,12 @@ def train_model(
     config['trainer']['tracker'].update(
         entity=wandb_entity, project=wandb_project, resume='must', id=wandb_id,
     )
+    if shared_wandb:
+        config['trainer']['tracker'].update(
+            type='stp_wandb',
+            round_id=int(os.path.basename(args.exp_dir).removeprefix('round')),
+            metric_prefix='conjecturer/' if args.conjecturer_only else '',
+        )
     with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml') as config_file:
         yaml.safe_dump(config, config_file)
         config_file.flush()
@@ -771,6 +778,8 @@ def train_model(
 
         LEV_ROOT = os.path.join(REPO_DIR, 'levanter')
         training_cmd = [sys.executable, 'levanter/examples/weighted_lm.py']
+        if shared_wandb:
+            training_cmd = [sys.executable, 'RL/train_llm.py']
         for k, v in training_config.items():
             training_cmd.append(f'--{k}')
             if v is None:
