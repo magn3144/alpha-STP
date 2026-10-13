@@ -24,7 +24,7 @@ training:
     tracker:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
-      project: alpha-STP
+      project: alpha-STP-RL
       name: llm-expert-b200
       tags: [LLM, expert-iteration, B200]
 

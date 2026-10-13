@@ -30,7 +30,7 @@ training:
     tracker:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
-      project: alpha-STP
+      project: alpha-STP-RL
       name: deltaproof-expert-codet5p-770m-b200-1-8-run3
       tags: [DeltaProof, expert-iteration, codet5p-770m, NuminaMath, B200, 1-8]
 
