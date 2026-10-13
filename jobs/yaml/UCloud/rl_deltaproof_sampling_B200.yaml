@@ -88,7 +88,7 @@ deltaproof:
     num_simulations: 64
     batch_size: 10
     gradient_accumulation_steps: 1
-    num_actors: 96
+    num_actors: 128
     num_games_per_actor: 500  # Unused by STP + DeltaProof.
     max_concurrent_lean_imports: 24
     inference_num_gpus: 1
