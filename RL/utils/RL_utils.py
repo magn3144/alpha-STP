@@ -153,6 +153,7 @@ def generate_and_test(
         test_batch_size: int = TEST_BATCH_SIZE,
         group_by_header: bool = False,
         collect_premises: bool = True,
+        progress=None,
 ) -> List[Dict]:
     """
     Generate and test proofs for the selected lemmas; parallelize the generation and testing process.
@@ -226,6 +227,9 @@ def generate_and_test(
                         complete=call['complete'],
                     )
                 test_results[get_deduplication_key(result)] = get_result_items(result)
+
+            if progress is not None:
+                progress.update(generated_proofs_dedup, test_results)
 
             nr_tests_done += len(results)
             nr_tests_correct += sum(result.get('complete', False) for result in results)
@@ -362,7 +366,8 @@ def generate_and_test(
         # clean up inference actors
         for actor in ray_inference_actors:
             ray.kill(actor)
-
+    if progress is not None:
+        progress.update(generated_proofs_dedup, test_results, force=True)
     return generated_proofs_dedup
 
 def update_succ_rates(generated_proofs, succ_rates):
@@ -593,11 +598,6 @@ class Sampler_base:
                 for test_info in selected_lemmas
                 if get_conjecture_level(test_info) > 0
             ]
-            if len(conjectures) < conjecture_target:
-                raise ValueError(
-                    f'Only {len(conjectures)} distinct conjectures were generated; '
-                    f'{conjecture_target} are required.'
-                )
 
         rng = np.random.default_rng(seed)
         selected_lemmas = select_dataset_theorems(
@@ -608,7 +608,7 @@ class Sampler_base:
         selected_lemmas = deepcopy(selected_lemmas)
 
         rng.shuffle(selected_lemmas)
-        generated_proofs_dedup = generate_and_test(selected_lemmas, collect_traj, ray_inference_actors, self.lemma_mapping, seed, save_dir)
+        generated_proofs_dedup = generate_and_test(selected_lemmas, collect_traj, ray_inference_actors, self.lemma_mapping, seed, save_dir, progress=kwargs.get('progress'))
         logging.info(f'#generated proofs before deduplication = {len(selected_lemmas)}, total proofs after deduplication = {len(generated_proofs_dedup)}')
 
         for actor in ray_inference_actors:
@@ -672,7 +672,7 @@ class Sampler_naive(Sampler_base):
 
         rng = np.random.default_rng(seed)
         rng.shuffle(selected_lemmas)
-        generated_proofs_dedup = generate_and_test(selected_lemmas, collect_traj, ray_inference_actors, self.lemma_mapping, seed, save_dir)
+        generated_proofs_dedup = generate_and_test(selected_lemmas, collect_traj, ray_inference_actors, self.lemma_mapping, seed, save_dir, progress=kwargs.get('progress'))
         logging.info(f'#generated lemmas before deduplication = {len(selected_lemmas)}, total lemmas after deduplication = {len(generated_proofs_dedup)}')
 
         update_succ_lemmas(generated_proofs_dedup, self.succ_lemmas)

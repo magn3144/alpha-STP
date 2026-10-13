@@ -32,6 +32,7 @@ def run_llm_round(
         run_python(
             RL_DIR / 'RL_step1_generate.py',
             '--model', model,
+            '--config', config_path,
             '--exp_dir', round_dir,
             '--seed', round_id,
             '--temperature', experiment['temperature'],

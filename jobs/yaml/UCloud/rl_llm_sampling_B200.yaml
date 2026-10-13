@@ -30,7 +30,7 @@ training:
 
     seed: 0
     mp: p=f32,c=bfloat16
-    train_batch_size: 32
+    train_batch_size: 128
     steps_per_eval: 100
     model_axis_size: 1
     tensor_parallel_axes: [mlp, heads]

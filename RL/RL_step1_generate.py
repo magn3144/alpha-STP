@@ -16,6 +16,8 @@ from utils.model_utils import init_ray_cluster
 from utils.RL_utils import collect_trajectories, collect_conjecture, load_ds_from_config
 from utils.RL_utils import Sampler_base, Sampler_naive, __DEBUG__, REPO_DIR
 from utils.timing_utils import configure_timing, timer
+from utils.config_utils import load_experiment_config
+from utils.llm_metrics import LLMMetrics
 
 MAX_LENGTH = 1024
 
@@ -25,6 +27,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--model", type=str, default=None)
+    parser.add_argument('--config', help='Experiment config for live W&B actor metrics.')
     parser.add_argument("--exp_dir", type=str, default=None)
     parser.add_argument("--dataset_config", type=str, default=None)
     parser.add_argument("--temperature", type=float, default=1.0)
@@ -82,6 +85,7 @@ if __name__ == "__main__":
         exit(0)
     
     init_ray_cluster()
+    progress = LLMMetrics(load_experiment_config(args.config, 'rl'), args.exp_dir) if args.config else None
 
     lemmas_to_generate = deepcopy(selected_statements)
     collect_conjecture_fn = lambda inference_pool, nr_actors, selected_lemmas, lemma_mapping, seed: \
@@ -91,16 +95,20 @@ if __name__ == "__main__":
         collect_trajectories(inference_pool, nr_actors, selected_lemmas, \
                                            MAX_LENGTH, seed, args.temperature, cache_dir=os.path.join(args.exp_dir, 'sampler_ckpt'))
     
-    with timer('generation_and_verification'):
-        generated_proofs, valid_conjecture_examples = sampler.generate(args.model, args.model,
-                lemmas_to_generate, args.seed, collect_traj,
-                save_dir=os.path.join(args.exp_dir, 'sampler_ckpt'),
-                collect_conjecture=collect_conjecture_fn, conjecture_multiplier=args.conjecture_multiplier,
-                round_id=round,
-                attempts_per_round=args.attempts_per_round,
-                conjecture_attempts=args.conjecture_attempts,
-                conjecture_fraction=args.conjecture_fraction,
-                project_to=formatted_ds)
+    try:
+        with timer('generation_and_verification'):
+            generated_proofs, valid_conjecture_examples = sampler.generate(args.model, args.model,
+                    lemmas_to_generate, args.seed, collect_traj,
+                    save_dir=os.path.join(args.exp_dir, 'sampler_ckpt'),
+                    collect_conjecture=collect_conjecture_fn, conjecture_multiplier=args.conjecture_multiplier,
+                    round_id=round,
+                    attempts_per_round=args.attempts_per_round,
+                    conjecture_attempts=args.conjecture_attempts,
+                    conjecture_fraction=args.conjecture_fraction,
+                    project_to=formatted_ds, progress=progress)
+    finally:
+        if progress is not None:
+            progress.finish()
 
     # log the distribution of succ rates for the generated lemmas
     proof_results = defaultdict(list)

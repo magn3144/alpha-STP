@@ -52,10 +52,6 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
     deltaproof = experiment['deltaproof']
     rl = config['deltaproof']['rl']
     inputs = select_conjecture_inputs(sampler, target, seed)
-    if len(inputs) < target:
-        raise ValueError(
-            f'Only {len(inputs)} conjecture inputs are available; {target} are required.'
-        )
 
     actors, _ = create_inference_actors(
         model,
@@ -118,11 +114,6 @@ def generate_conjectures(sampler, model, dataset, target, config, round_dir, see
         for result in validation_results if result.get('pass', False)
     }
     valid = [candidate for candidate in distinct if candidate['lemma_id'] in valid_ids]
-    if len(valid) < target:
-        raise ValueError(
-            f'Only {len(valid)} valid distinct conjectures were generated; '
-            f'{target} are required.'
-        )
     valid.sort(key=lambda result: result['lemma_id'])
     np.random.default_rng(seed).shuffle(valid)
     progress.select(valid[:target])
