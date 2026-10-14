@@ -171,6 +171,8 @@ def _validate(value, schema, path):
     if isinstance(schema, dict):
         if not isinstance(value, dict):
             raise ValueError(f'{path} must be a mapping')
+        if schema is OPTIMIZER_SCHEMA and 'warmup' in value:
+            schema = {**schema, 'warmup': NUMBER}
         missing = schema.keys() - value.keys()
         unknown = value.keys() - schema.keys()
         if missing:
@@ -297,8 +299,8 @@ def _validate_ranges(config, kind):
             raise ValueError('training.optimizer.lr_schedule has an unsupported value')
         if optimizer['stable'] < 0 or optimizer['cooldown'] < 0:
             raise ValueError('training.optimizer.stable and cooldown must be nonnegative')
-    if kind == 'sft' and optimizer['warmup'] < 0:
-        raise ValueError('training.optimizer.warmup must be nonnegative')
+        if 'warmup' in optimizer and optimizer['warmup'] < 0:
+            raise ValueError('training.optimizer.warmup must be nonnegative')
     if kind == 'sft' and training['save_freq'] > trainer['num_train_steps']:
         raise ValueError('training.save_freq must not exceed trainer.num_train_steps')
     if kind != 'sft' and config['experiment']['dataset_size'] < 0:
