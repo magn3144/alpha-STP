@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+trap 'status=$?; if (( status == 0 )); then echo "STP experiment succeeded."; else echo "STP experiment FAILED (exit $status)." >&2; fi; exit "$status"' EXIT
+
 # Supply the allocation expected by the existing Ray initializer.
 export LSB_DJOB_NUMPROC="$(python3 -c 'import json; print(json.load(open("/work/JobParameters.json"))["machineType"]["cpu"])')"
 export RAY_TMPDIR=/tmp

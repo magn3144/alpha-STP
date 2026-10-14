@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Tuple, Optional
 
 from utils.model_utils import START_THM, START_LEMMA_STMT, END_THM, INVOKED_LEMMA, PROVER_PROMPT
 from utils.RL_utils import calculate_cumulative_solve_rate, train_model, load_training_config, load_wandb_config
-from utils.file_utils import path_exists, read_file, write_data
+from utils.file_utils import copy_dir, path_exists, read_file, write_data
 from utils.timing_utils import configure_timing, EventTimer
 from utils.training_data_utils import format_data, select_training_proofs
 from utils.config_utils import load_experiment_config
@@ -137,10 +137,6 @@ if __name__ == "__main__":
     else:
         valid_proofs = select_training_proofs(generated_proofs, train_ds)
         new_ds = format_and_deduplicate_dataset(valid_proofs, train_ds, generated_proofs)
-        if len(new_ds) == 0:
-            logging.error(f'[Erorr] No new data generated. Exiting...')
-            preparation_timer.stop('failed', reason='no_new_data')
-            exit(1)
         logging.info(f'Number of new data: {len(new_ds)}')
         train_ds += new_ds
 
@@ -169,21 +165,19 @@ if __name__ == "__main__":
         )
     train_ds += training_conjectures
     batch_size = load_training_config(args.training_config)['trainer']['train_batch_size']
-    if len(train_ds) < batch_size:
-        if args.conjecturer_only:
-            logging.info(
-                f'Skipping conjecturer training: {len(training_conjectures)} conjectures '
-                f'= {len(train_ds)} examples; '
-                f'one batch requires {batch_size}. Keeping the previous checkpoint.'
-            )
-            preparation_timer.stop('skipped', reason='insufficient_training_data')
-            exit(0)
-        preparation_timer.stop('failed', reason='insufficient_training_data')
-        raise ValueError(
-            f'Training dataset has {len(train_ds)} examples '
-            f'({len(new_ds_conjecture)} new conjectures); '
-            f'at least {batch_size} examples are required for one full training batch.'
+    if args.conjecturer_only and len(train_ds) < batch_size:
+        logging.info(
+            f'Skipping conjecturer training: {len(training_conjectures)} conjectures '
+            f'= {len(train_ds)} examples; '
+            f'one batch requires {batch_size}. Keeping the previous checkpoint.'
         )
+        preparation_timer.stop('skipped', reason='insufficient_training_data')
+        exit(0)
+    if not train_ds:
+        logging.info('Skipping solver training: no examples. Keeping the previous checkpoint.')
+        copy_dir(args.base_model, os.path.join(args.save_dir, args.model_name))
+        preparation_timer.stop('skipped', reason='no_training_data')
+        exit(0)
 
     run = initialize_run(load_experiment_config(args.training_config, 'rl'), args.exp_dir)
     wandb_id = run.id
@@ -218,12 +212,11 @@ if __name__ == "__main__":
     wandb.finish(quiet=True)
 
     # save trajectories
+    padding_count = -len(train_ds) % batch_size
+    indices = rng.choice(len(train_ds), size=padding_count, replace=True)
+    train_ds += [train_ds[index] for index in indices]
     rng.shuffle(train_ds)
-    if args.conjecturer_only:
-        padding_count = -len(train_ds) % batch_size
-        indices = rng.choice(len(train_ds), size=padding_count, replace=True)
-        train_ds += [train_ds[index] for index in indices]
-        logging.info(f'Repeated {padding_count} examples to fill the final training batch.')
+    logging.info(f'Repeated {padding_count} examples to fill the final training batch.')
     write_data(json.dumps(train_ds), os.path.join(args.save_dir, 'train_ds.json'), 'json', no_compression=True)
     preparation_timer.stop()
 

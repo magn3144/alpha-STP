@@ -26,11 +26,13 @@ class STPWandbTracker(WandbTracker):
             self.run.define_metric(key, step_metric=self.step_metric)
             self.defined_metrics.add(key)
         if step is not None:
+            if int(step) > self.local_step and self.local_step >= 0:
+                self.run.log({}, commit=True)
             self.local_step = max(self.local_step, int(step))
         metrics |= {'round': self.round_id, self.step_metric: self.offset + self.local_step + 1}
         # W&B's history index also includes actor events; never use the local
         # optimizer step as its index, or resumed-round metrics get discarded.
-        self.run.log(metrics, commit=commit)
+        self.run.log(metrics, commit=False if commit is None else commit)
 
 
 @TrackerConfig.register_subclass('stp_wandb')
