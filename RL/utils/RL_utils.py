@@ -752,7 +752,6 @@ def train_model(
             'save_freq': max_iters,
             'hf_save_path': os.path.join(output_dir, 'hf_checkpoints'),
 
-            'optimizer.warmup': min(max_iters - 1, 5),
         }
     if eval_data_path is not None:
         training_config |= {
@@ -761,6 +760,7 @@ def train_model(
         }
 
     config = load_training_config(training_config_path)
+    config['optimizer'].setdefault('warmup', min(max_iters - 1, 5))
     config['trainer']['id'] = wandb_id
     config['trainer']['tracker'].update(
         entity=wandb_entity, project=wandb_project, resume='must', id=wandb_id,

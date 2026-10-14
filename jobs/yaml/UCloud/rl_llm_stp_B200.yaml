@@ -1,6 +1,6 @@
 experiment:
   type: rl
-  exp_dir: "${DATA}/runs/stp_llm_b200"
+  exp_dir: "${DATA}/runs/stp_llm_b200-01"
   dataset_size: 0
   total_rounds: 10
   temperature: 1.0
@@ -25,12 +25,12 @@ training:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
       project: alpha-STP-RL
-      name: llm-stp-b200
+      name: llm-stp-b200-01
       tags: [LLM, STP, B200]
 
     seed: 0
     mp: p=f32,c=bfloat16
-    train_batch_size: 128
+    train_batch_size: 64
     steps_per_eval: 100
     model_axis_size: 1
     tensor_parallel_axes: [mlp, heads]
@@ -40,7 +40,8 @@ training:
   eval_on_first_step: false
 
   optimizer:
-    learning_rate: 6.25e-6
+    learning_rate: 8.838834764831845e-6
+    warmup: 0
     weight_decay: 0.0
     beta1: 0.9
     beta2: 0.95

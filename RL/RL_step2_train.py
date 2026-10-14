@@ -222,7 +222,7 @@ if __name__ == "__main__":
 
     # train the actor
     max_iters = max(len(train_ds) * args.epoch // batch_size, 5)
-    logging.info(f'Training steps = {max_iters}; warmup steps = {min(max_iters - 1, 5)}')
+    logging.info(f'Training steps = {max_iters}')
     train_model(os.path.join(args.save_dir, args.model_name), args.base_model, max_iters, os.path.join(args.save_dir, 'train_ds.json'),
                     args, wandb_entity, wandb_project, wandb_id, 'round_network_training',
                     args.training_config, shared_wandb=True)
