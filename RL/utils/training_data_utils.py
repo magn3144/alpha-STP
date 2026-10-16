@@ -5,8 +5,12 @@ from copy import deepcopy
 PROVER_PROMPT = 'Complete the following Lean 4 code:\n\n```lean4\nimport Mathlib\nimport Aesop\nset_option maxHeartbeats 0\nopen BigOperators Real Nat Topology Rat\n'
 
 
-def select_dataset_theorems(dataset, solved, count, rng):
-    """Fill the attempt budget with shuffled passes over unsolved theorems."""
+def select_dataset_theorems(dataset, solved, count, rng, attempts_per_theorem=1):
+    """Select unsolved theorems within the attempt budget.
+
+    Grouped attempts sample distinct theorems and cap at the available dataset.
+    Single attempts fill the budget with shuffled passes over unsolved theorems.
+    """
     unsolved = list({
         item['lemma_id']: item
         for item in dataset
@@ -14,6 +18,10 @@ def select_dataset_theorems(dataset, solved, count, rng):
     }.values())
     if not unsolved:
         return []
+    if attempts_per_theorem > 1:
+        rng.shuffle(unsolved)
+        selected = unsolved[:count // attempts_per_theorem]
+        return [deepcopy(item) for item in selected for _ in range(attempts_per_theorem)]
     selected = []
     while len(selected) < count:
         rng.shuffle(unsolved)
@@ -36,25 +44,30 @@ def format_data(header, statement, proof):
     return prompt, proof
 
 
-def select_training_proofs(generated_proofs, existing_examples=()):
-    """Keep verified dataset proofs and conjectures with pass rate <= 0.5.
+def select_training_proofs(generated_proofs, existing_examples=(), filter_dataset=False):
+    """Keep verified proofs, filtering conjectures and optionally dataset theorems.
 
     Select the most recent copy of each formatted whole proof. Multiplicity
-    contributes to the empirical pass rate, as in the STP LLM trainer.
+    contributes to the empirical pass rate. Dataset filtering uses each round's
+    attempts separately so replay does not change its measured solve rate.
     """
     results = {}
     for proof in generated_proofs:
-        results.setdefault(proof['statement'], [0, 0])
+        key = (proof['round'] if filter_dataset and get_conjecture_level(proof) == 0 else None,
+               proof['statement'])
+        results.setdefault(key, [0, 0])
         count = proof.get('multiplicity', 1)
-        results[proof['statement']][0] += count * proof.get('complete', False)
-        results[proof['statement']][1] += count
+        results[key][0] += count * proof.get('complete', False)
+        results[key][1] += count
     known = {(example['prompt'], example['target']) for example in existing_examples}
     selected = []
     for proof in reversed(generated_proofs):
         if not proof.get('complete', False):
             continue
-        successes, attempts = results[proof['statement']]
-        if get_conjecture_level(proof) > 0 and successes / attempts > 0.5:
+        key = (proof['round'] if filter_dataset and get_conjecture_level(proof) == 0 else None,
+               proof['statement'])
+        successes, attempts = results[key]
+        if (filter_dataset or get_conjecture_level(proof) > 0) and successes / attempts > 0.5:
             continue
         key = format_data(proof.get('header'), proof['statement'], proof['proof'])
         if key not in known:

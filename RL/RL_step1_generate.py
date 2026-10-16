@@ -34,6 +34,7 @@ if __name__ == "__main__":
     parser.add_argument("--sampler", type=str, default='Sampler_conjecture')
     parser.add_argument("--conjecture_multiplier", type=int, default=1)
     parser.add_argument("--attempts_per_round", type=int, required=True)
+    parser.add_argument("--dataset_attempts_per_theorem", type=int, required=True)
     parser.add_argument("--conjecture_attempts", type=int, required=True)
     parser.add_argument("--conjecture_fraction", type=float, required=True)
     parser.add_argument("--dataset_size", type=int, default=0)
@@ -103,6 +104,7 @@ if __name__ == "__main__":
                     collect_conjecture=collect_conjecture_fn, conjecture_multiplier=args.conjecture_multiplier,
                     round_id=round,
                     attempts_per_round=args.attempts_per_round,
+                    dataset_attempts_per_theorem=args.dataset_attempts_per_theorem,
                     conjecture_attempts=args.conjecture_attempts,
                     conjecture_fraction=args.conjecture_fraction,
                     project_to=formatted_ds, progress=progress)

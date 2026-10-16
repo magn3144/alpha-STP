@@ -567,6 +567,7 @@ class Sampler_base:
             save_dir: str = None,
             round_id: int = 0,
             attempts_per_round=4800,
+            dataset_attempts_per_theorem=1,
             conjecture_attempts=16,
             conjecture_fraction=0.5,
             **kwargs,
@@ -602,6 +603,7 @@ class Sampler_base:
         rng = np.random.default_rng(seed)
         selected_lemmas = select_dataset_theorems(
             lemmas_to_generate, self.succ_lemmas, dataset_attempts, rng,
+            attempts_per_theorem=dataset_attempts_per_theorem,
         )
         selected_lemmas += conjectures * conjecture_attempts
         logging.info(f'#selected statements = {len(selected_lemmas)}')

@@ -96,6 +96,7 @@ if __name__ == "__main__":
     parser.add_argument("--conjecturer_only", action='store_true')
     parser.add_argument("--model_name", default='RL_model')
     args = parser.parse_args()
+    config = load_experiment_config(args.training_config, 'rl')
     if args.save_dir is None:
         args.save_dir = args.exp_dir
     print(args)
@@ -135,7 +136,10 @@ if __name__ == "__main__":
     if args.conjecturer_only:
         new_ds = []
     else:
-        valid_proofs = select_training_proofs(generated_proofs, train_ds)
+        valid_proofs = select_training_proofs(
+            generated_proofs, train_ds,
+            filter_dataset=config['experiment']['llm']['dataset_attempts_per_theorem'] > 1,
+        )
         new_ds = format_and_deduplicate_dataset(valid_proofs, train_ds, generated_proofs)
         logging.info(f'Number of new data: {len(new_ds)}')
         train_ds += new_ds
@@ -179,7 +183,7 @@ if __name__ == "__main__":
         preparation_timer.stop('skipped', reason='no_training_data')
         exit(0)
 
-    run = initialize_run(load_experiment_config(args.training_config, 'rl'), args.exp_dir)
+    run = initialize_run(config, args.exp_dir)
     wandb_id = run.id
     wandb_config = load_wandb_config(args.training_config)
     wandb_entity = wandb_config['entity']

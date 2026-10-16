@@ -40,6 +40,7 @@ def run_llm_round(
             '--sampler', experiment['sampler'],
             '--conjecture_multiplier', experiment['conjecture_multiplier'],
             '--attempts_per_round', llm['attempts_per_round'],
+            '--dataset_attempts_per_theorem', llm['dataset_attempts_per_theorem'],
             '--conjecture_attempts', llm['conjecture_attempts'],
             '--conjecture_fraction', llm['conjecture_fraction'],
             '--dataset_size', dataset_size,

@@ -86,6 +86,7 @@ RL_SCHEMA = {
             'base_model': str,
             'dataset_config': str,
             'attempts_per_round': int,
+            'dataset_attempts_per_theorem': int,
             'conjecture_attempts': int,
             'conjecture_fraction': NUMBER,
         },
@@ -256,6 +257,7 @@ def _validate_ranges(config, kind):
                 llm = experiment['llm']
                 positive |= {
                     'experiment.llm.attempts_per_round': llm['attempts_per_round'],
+                    'experiment.llm.dataset_attempts_per_theorem': llm['dataset_attempts_per_theorem'],
                     'experiment.llm.conjecture_attempts': llm['conjecture_attempts'],
                 }
                 if not 0 <= llm['conjecture_fraction'] <= 1:
@@ -270,6 +272,12 @@ def _validate_ranges(config, kind):
                         'the conjecture attempt budget must be divisible by '
                         'experiment.llm.conjecture_attempts'
                     )
+                for budget in (llm['attempts_per_round'], llm['attempts_per_round'] - conjecture_budget):
+                    if llm['dataset_attempts_per_theorem'] <= 0 or budget % llm['dataset_attempts_per_theorem']:
+                        raise ValueError(
+                            'the dataset attempt budget must be divisible by the positive '
+                            'experiment.llm.dataset_attempts_per_theorem'
+                        )
         else:
             positive['experiment.samples_per_statement'] = experiment['samples_per_statement']
             if kind == 'expert_iteration':
