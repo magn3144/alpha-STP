@@ -27,6 +27,6 @@ torch==2.8.0+cu128
 tqdm==4.67.1
 transformers==4.55.2
 vllm==0.10.2
-wandb==0.17.5
+wandb==0.30.0
 # Keep JAX's compiler/toolkit on the same CUDA minor as PyTorch.
 nvidia-cuda-nvcc-cu12==12.8.93

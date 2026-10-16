@@ -108,8 +108,6 @@ distlib==0.4.3
     # via virtualenv
 dnspython==2.8.0
     # via email-validator
-docker-pycreds==0.4.0
-    # via wandb
 draccus==0.11.6
     # via levanter
 easydict==1.13
@@ -168,10 +166,6 @@ func-timeout==4.3.5
     # via -r requirements-ucloud-b200.in
 gguf==0.19.0
     # via vllm
-gitdb==4.0.12
-    # via gitpython
-gitpython==3.2.0
-    # via wandb
 google-api-core==2.33.0
     # via opencensus
 google-auth==2.61.0
@@ -416,6 +410,7 @@ opentelemetry-api==1.45.1
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
+    #   wandb
 opentelemetry-exporter-http-transport==0.66b1
     # via opentelemetry-exporter-otlp-proto-http
 opentelemetry-exporter-otlp-common==0.66b1
@@ -423,7 +418,9 @@ opentelemetry-exporter-otlp-common==0.66b1
 opentelemetry-exporter-otlp-proto-common==1.45.1
     # via opentelemetry-exporter-otlp-proto-http
 opentelemetry-exporter-otlp-proto-http==1.45.1
-    # via fastapi
+    # via
+    #   fastapi
+    #   wandb
 opentelemetry-exporter-prometheus==0.66b1
     # via ray
 opentelemetry-proto==1.45.1
@@ -438,6 +435,7 @@ opentelemetry-sdk==1.45.1
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   ray
+    #   wandb
 opentelemetry-semantic-conventions==0.66b1
     # via opentelemetry-sdk
 opt-einsum==3.4.0
@@ -458,6 +456,7 @@ packaging==26.3
     #   ray
     #   transformers
     #   virtualenv
+    #   wandb
 pandas==2.2.2
     # via
     #   -r requirements-ucloud-b200.in
@@ -501,7 +500,6 @@ psutil==6.0.0
     # via
     #   -r requirements-ucloud-b200.in
     #   vllm
-    #   wandb
 py-cpuinfo==9.0.0
     # via vllm
 py-spy==0.4.2
@@ -535,6 +533,7 @@ pydantic==2.14.0
     #   pydantic-settings
     #   ray
     #   vllm
+    #   wandb
     #   xgrammar
 pydantic-core==2.50.0
     # via pydantic
@@ -641,28 +640,19 @@ scipy==1.12.0
 sentencepiece==0.2.2
     # via vllm
 sentry-sdk==2.71.0
-    # via
-    #   fastapi-cloud-cli
-    #   wandb
+    # via fastapi-cloud-cli
 setproctitle==1.3.8
-    # via
-    #   vllm
-    #   wandb
+    # via vllm
 setuptools==84.0.0
-    # via
-    #   triton
-    #   wandb
+    # via triton
 shellingham==1.5.4
     # via typer
 six==1.17.0
     # via
-    #   docker-pycreds
     #   opencensus
     #   python-dateutil
 smart-open==8.0.2
     # via ray
-smmap==5.0.3
-    # via gitdb
 sniffio==1.3.1
     # via openai
 soundfile==0.14.0
@@ -775,6 +765,7 @@ typing-extensions==4.16.0
     #   uvicorn
     #   virtualenv
     #   vllm
+    #   wandb
     #   xgrammar
 typing-inspect==0.9.0
     # via
@@ -804,7 +795,7 @@ vllm==0.10.2
     # via -r requirements-ucloud-b200.in
 wadler-lindig==0.1.7
     # via equinox
-wandb==0.17.5
+wandb==0.30.0
     # via
     #   -r requirements-ucloud-b200.in
     #   levanter
@@ -821,7 +812,9 @@ xformers==0.0.32.post1
 xgrammar==0.1.23
     # via vllm
 xxhash==4.0.1
-    # via datasets
+    # via
+    #   datasets
+    #   wandb
 yarl==1.25.1
     # via aiohttp
 zstandard==0.25.0
