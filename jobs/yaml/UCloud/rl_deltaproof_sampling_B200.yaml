@@ -15,7 +15,7 @@ experiment:
     lean_project: "${DELTA_PROOF}/lean_project"
     lake_path: "${ELAN_HOME}/bin/lake"
     imports: [Mathlib]
-    attempts_per_round: 19200
+    attempts_per_round: 4800
     conjecture_attempts: 16
     conjecture_fraction: 0
     learner_epochs_per_round: 0
