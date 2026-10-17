@@ -3,7 +3,9 @@
 import logging
 from dataclasses import dataclass
 
+import wandb
 import levanter.config
+from levanter.tracker import get_tracker
 from levanter.tracker.tracker import TrackerConfig
 from levanter.tracker.wandb import WandbConfig, WandbTracker
 from weighted_lm import train
@@ -42,6 +44,9 @@ class STPWandbConfig(WandbConfig):
     metric_prefix: str = ''
 
     def init(self, run_id):
+        if wandb.run is not None:
+            assert wandb.run.id == (self.id or run_id)
+            return get_tracker('wandb')
         tracker = super().init(run_id)
         return STPWandbTracker(tracker.run, self.round_id, self.metric_prefix)
 

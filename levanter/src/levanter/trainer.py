@@ -165,12 +165,6 @@ class Trainer:
         else:
             self.tracker = config.tracker.init(self.run_id)
 
-        self._raw_loss_function = loss_fn or ModuleComputeLoss()
-        if isinstance(config.tracker, Sequence):
-            self.tracker = levanter.tracker.CompositeTracker([c.init(self.run_id) for c in config.tracker])
-        else:
-            self.tracker = config.tracker.init(self.run_id)
-
         self._cmanagers = []
 
         if add_default_hooks:
