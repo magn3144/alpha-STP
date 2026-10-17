@@ -268,10 +268,10 @@ def main(args):
         run_round(args, config, round_dir, progress)
     except BaseException:
         progress.save({'round': progress.round_id, 'status': 'failed'})
-        progress.run.finish(exit_code=1, quiet=True)
+        progress.run.finish(exit_code=1)
         raise
     else:
-        progress.run.finish(quiet=True)
+        progress.run.finish()
 
 
 def run_round(args, config, round_dir, progress):

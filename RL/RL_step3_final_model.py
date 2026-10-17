@@ -219,7 +219,7 @@ if __name__ == "__main__":
     metrics |= compute_metric(new_ds, 'RL_new')
     wandb.log(metrics)
     logging.info(str(metrics))
-    wandb.finish(quiet=True)
+    wandb.finish()
 
     # save trajectories
     rng.shuffle(train_ds)

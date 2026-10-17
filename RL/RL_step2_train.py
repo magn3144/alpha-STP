@@ -213,7 +213,7 @@ if __name__ == "__main__":
     }
     wandb.log({'round': round, **metrics})
     logging.info(str(metrics))
-    wandb.finish(quiet=True)
+    wandb.finish()
 
     # save trajectories
     padding_count = -len(train_ds) % batch_size
