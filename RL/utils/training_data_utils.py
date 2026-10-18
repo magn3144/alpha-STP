@@ -6,11 +6,7 @@ PROVER_PROMPT = 'Complete the following Lean 4 code:\n\n```lean4\nimport Mathlib
 
 
 def select_dataset_theorems(dataset, solved, count, rng, attempts_per_theorem=1):
-    """Select unsolved theorems within the attempt budget.
-
-    Grouped attempts sample distinct theorems and cap at the available dataset.
-    Single attempts fill the budget with shuffled passes over unsolved theorems.
-    """
+    """Fill the attempt budget with shuffled passes over unsolved theorem groups."""
     unsolved = list({
         item['lemma_id']: item
         for item in dataset
@@ -18,15 +14,13 @@ def select_dataset_theorems(dataset, solved, count, rng, attempts_per_theorem=1)
     }.values())
     if not unsolved:
         return []
-    if attempts_per_theorem > 1:
-        rng.shuffle(unsolved)
-        selected = unsolved[:count // attempts_per_theorem]
-        return [deepcopy(item) for item in selected for _ in range(attempts_per_theorem)]
+    assert count % attempts_per_theorem == 0
+    theorem_count = count // attempts_per_theorem
     selected = []
-    while len(selected) < count:
+    while len(selected) < theorem_count:
         rng.shuffle(unsolved)
-        selected.extend(unsolved[:count - len(selected)])
-    return [deepcopy(item) for item in selected]
+        selected.extend(unsolved[:theorem_count - len(selected)])
+    return [deepcopy(item) for item in selected for _ in range(attempts_per_theorem)]
 
 
 def get_conjecture_level(test_info):
