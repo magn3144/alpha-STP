@@ -579,6 +579,13 @@ class Sampler_base:
         for test_info in project_to:
             insert_lemma(self.lemma_mapping, test_info)
 
+        # In round 0, spend the conjecture share on the same dataset theorem groups.
+        if round_id == 0 and dataset_attempts_per_theorem > 1:
+            dataset_budget = attempts_per_round - int(attempts_per_round * conjecture_fraction)
+            theorem_count = dataset_budget // dataset_attempts_per_theorem
+            assert attempts_per_round % theorem_count == 0
+            dataset_attempts_per_theorem = attempts_per_round // theorem_count
+
         conjecture_budget = int(attempts_per_round * conjecture_fraction) if round_id > 0 else 0
         conjecture_target = conjecture_budget // conjecture_attempts
         conjectures = []
