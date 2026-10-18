@@ -5,14 +5,14 @@ from pathlib import Path
 
 from utils.file_utils import read_file
 from utils.RL_utils import get_deduplication_key
-from utils.training_data_utils import get_conjecture_level
 from utils.stp_wandb import initialize_run
 
 
 class LLMMetrics:
     """Track verified solve attempts, including repeated identical proofs."""
 
-    def __init__(self, config, round_dir):
+    def __init__(self, config, round_dir, dataset_lemmas):
+        self.dataset_lemmas = dataset_lemmas
         self.round_dir = Path(round_dir)
         self.round_id = int(self.round_dir.name.removeprefix('round'))
         self.path = self.round_dir / 'actor_metrics.json'
@@ -25,7 +25,7 @@ class LLMMetrics:
             self.previous_games += sum(proof.get('multiplicity', 1) for proof in proofs)
             self.proved_theorems.update(
                 proof['lemma_id'] for proof in proofs
-                if proof['complete'] and get_conjecture_level(proof) == 0
+                if proof['complete'] and proof['lemma_id'] in self.dataset_lemmas
             )
         self.run = initialize_run(config, round_dir)
         self.last_log = 0
@@ -44,13 +44,12 @@ class LLMMetrics:
             self.records[fingerprint] = {
                 'games': max(proof.get('multiplicity', 1), self.records.get(fingerprint, {}).get('games', 0)),
                 'complete': result['complete'],
-                'dataset': get_conjecture_level(proof) == 0,
                 'lemma_id': proof['lemma_id'],
             }
         games = self.previous_games + sum(record['games'] for record in self.records.values())
         proved = self.proved_theorems | {
             record['lemma_id'] for record in self.records.values()
-            if record['complete'] and record['dataset']
+            if record['complete'] and record['lemma_id'] in self.dataset_lemmas
         }
         temporary = self.path.with_suffix('.json.tmp')
         temporary.write_text(json.dumps(self.records))

@@ -86,7 +86,7 @@ if __name__ == "__main__":
         exit(0)
     
     init_ray_cluster()
-    progress = LLMMetrics(load_experiment_config(args.config, 'rl'), args.exp_dir) if args.config else None
+    progress = LLMMetrics(load_experiment_config(args.config, 'rl'), args.exp_dir, sampler.relevant_lemmas) if args.config else None
 
     lemmas_to_generate = deepcopy(selected_statements)
     collect_conjecture_fn = lambda inference_pool, nr_actors, selected_lemmas, lemma_mapping, seed: \
