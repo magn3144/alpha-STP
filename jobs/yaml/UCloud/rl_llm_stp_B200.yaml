@@ -1,6 +1,6 @@
 experiment:
   type: rl
-  exp_dir: "${DATA}/runs/stp_llm_b200-02"
+  exp_dir: "${DATA}/runs/stp_llm_b200-03"
   dataset_size: 0
   total_rounds: 10
   temperature: 1.0
@@ -26,7 +26,7 @@ training:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
       project: alpha-STP-RL
-      name: llm-stp-b200-02
+      name: llm-stp-b200-03
       tags: [LLM, STP, B200]
 
     seed: 0

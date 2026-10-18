@@ -1,6 +1,6 @@
 experiment:
   type: rl
-  exp_dir: "${DATA}/runs/expert_iteration_llm_b200-02"
+  exp_dir: "${DATA}/runs/expert_iteration_llm_b200-03"
   dataset_size: 0
   total_rounds: 10
   temperature: 1.0
@@ -11,7 +11,7 @@ experiment:
     base_model: "${DATA}/runs/sft_stp_paper_deepseek_prover_v1.5_b200/models/bwmpag9m/step-114"
     dataset_config: "RL/dataset_configs/stp_llm_deltaproof_rl_1_8.json"
     attempts_per_round: 153600
-    dataset_attempts_per_theorem: 16
+    dataset_attempts_per_theorem: 32
     conjecture_attempts: 16
     conjecture_fraction: 0
 
@@ -26,7 +26,7 @@ training:
       type: wandb
       entity: s204164-danmarks-tekniske-universitet-dtu
       project: alpha-STP-RL
-      name: llm-expert-b200-02
+      name: llm-expert-b200-03
       tags: [LLM, expert-iteration, B200]
 
     seed: 0

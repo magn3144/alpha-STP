@@ -579,15 +579,22 @@ class Sampler_base:
         for test_info in project_to:
             insert_lemma(self.lemma_mapping, test_info)
 
-        if round_id == 0 or conjecture_fraction == 0:
-            dataset_attempts = attempts_per_round
-            conjecture_target = 0
-            conjectures = []
-        else:
-            conjecture_budget = int(attempts_per_round * conjecture_fraction)
-            dataset_attempts = attempts_per_round - conjecture_budget
-            conjecture_target = conjecture_budget // conjecture_attempts
-            selected_lemmas = self.select(
+        conjecture_budget = int(attempts_per_round * conjecture_fraction)
+        dataset_attempts = attempts_per_round
+        if round_id > 0 or dataset_attempts_per_theorem > 1:
+            dataset_attempts -= conjecture_budget
+
+        rng = np.random.default_rng(seed)
+        selected_lemmas = select_dataset_theorems(
+            lemmas_to_generate, self.succ_lemmas, dataset_attempts, rng,
+            attempts_per_theorem=dataset_attempts_per_theorem,
+        )
+        conjecture_target = conjecture_budget // conjecture_attempts if round_id > 0 else 0
+        if dataset_attempts_per_theorem > 1:
+            conjecture_target = min(conjecture_target, len(selected_lemmas) // dataset_attempts_per_theorem)
+        conjectures = []
+        if conjecture_target:
+            conjecture_statements = self.select(
                 lemmas_to_generate,
                 ray_inference_actors=ray_inference_actors,
                 seed=seed,
@@ -596,14 +603,12 @@ class Sampler_base:
             )
             conjectures = [
                 test_info
-                for test_info in selected_lemmas
+                for test_info in conjecture_statements
                 if get_conjecture_level(test_info) > 0
-            ]
-
-        rng = np.random.default_rng(seed)
-        selected_lemmas = select_dataset_theorems(
-            lemmas_to_generate, self.succ_lemmas, dataset_attempts, rng,
-            attempts_per_theorem=dataset_attempts_per_theorem,
+            ][:conjecture_target]
+        logging.info(
+            f'Dataset solve attempts = {len(selected_lemmas)}, '
+            f'conjecture solve attempts = {len(conjectures) * conjecture_attempts}'
         )
         selected_lemmas += conjectures * conjecture_attempts
         logging.info(f'#selected statements = {len(selected_lemmas)}')
