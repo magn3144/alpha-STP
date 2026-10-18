@@ -10,7 +10,7 @@ experiment:
   llm:
     base_model: "${DATA}/runs/sft_stp_paper_deepseek_prover_v1.5_b200/models/bwmpag9m/step-114"
     dataset_config: "RL/dataset_configs/stp_llm_deltaproof_rl_1_8.json"
-    attempts_per_round: 153600
+    attempts_per_round: 76800
     dataset_attempts_per_theorem: 32
     conjecture_attempts: 16
     conjecture_fraction: 0
