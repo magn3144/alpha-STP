@@ -1,6 +1,7 @@
 import argparse
 import os
 from pathlib import Path
+from shutil import copyfile
 
 from utils.config_utils import load_experiment_config
 from utils.experiment_utils import REPO_DIR, RL_DIR, run_external_python, run_python
@@ -162,6 +163,19 @@ def main(args):
                     print('All dataset theorems are solved.', flush=True)
                     break
                 if not args.dry_run:
+                    if 'deltaproof' in experiment:
+                        interval = config['deltaproof']['rl']['checkpoint_interval']
+                        if (round_id + 1) % interval == 0 or round_id + 1 == experiment['total_rounds']:
+                            source = (
+                                exp_dir / 'deltaproof/checkpoints/latest.pt'
+                                if experiment['deltaproof']['learner_epochs_per_round']
+                                else Path(config['deltaproof']['rl']['sft_run_dir']) / 'network_params.pt'
+                            )
+                            checkpoint = round_dir / 'solver_checkpoint.pt'
+                            temporary = checkpoint.with_suffix('.tmp')
+                            copyfile(source, temporary)
+                            temporary.replace(checkpoint)
+                            print(f'Saved solver checkpoint: {checkpoint}', flush=True)
                     (round_dir / 'round_complete').touch()
 
 
