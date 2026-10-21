@@ -1,0 +1,16 @@
+validation_data: "${DELTA_PROOF}/data/dataset/numina_math_lean_passing_1_8/validation_verified_400.jsonl"
+output_dir: "${ALPHA_STP}/data/runs/validation_loss_llm_b200_03_04_verified400"
+starting_model: "${ALPHA_STP}/data/runs/sft_stp_paper_deepseek_prover_v1.5_b200/models/bwmpag9m/step-114"
+# Match the training context budget, while scoring entire proofs without truncation.
+context_length: 2048
+stride: 1024
+checkpoint_runs:
+  stp_llm_b200-03: "${ALPHA_STP}/data/runs/stp_llm_b200-03"
+  expert_iteration_llm_b200-03: "${ALPHA_STP}/data/runs/expert_iteration_llm_b200-03"
+  stp_llm_b200-04: "${ALPHA_STP}/data/runs/stp_llm_b200-04"
+  expert_iteration_llm_b200-04: "${ALPHA_STP}/data/runs/expert_iteration_llm_b200-04"
+expected_checkpoints:
+  stp_llm_b200-03: 4
+  expert_iteration_llm_b200-03: 5
+  stp_llm_b200-04: 10
+  expert_iteration_llm_b200-04: 10
