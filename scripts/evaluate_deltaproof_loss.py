@@ -13,6 +13,7 @@ import torch
 import yaml
 from leantree import LeanProject, StoredError
 from leantree.file_span import FileSpan
+from leantree.repl_adapter.ast_parser import LeanASTLiteral, LeanASTNode
 
 from alphaproof.core.config import rl_config_from_dict
 from alphaproof.core.network import Network
@@ -40,6 +41,13 @@ def merge_tactic_spans(spans, content, should_merge):
         else:
             merged.append(span)
     return merged
+
+
+def tactic_tokens(node):
+    """Exclude anonymous syntax metadata from reconstructed calc expressions."""
+    if isinstance(node, LeanASTLiteral):
+        return [] if node.value == '`[anonymous]' else [node.pretty_print()]
+    return [token for child in node.get_children() for token in tactic_tokens(child)]
 
 
 def prepare(config):
@@ -95,7 +103,8 @@ def extract(dataset, project_path, output):
             source = sources / f'{index:03d}.lean'
             source.write_text(row['verified_proof'])
             # LeanTree's merge shortens enclosing spans to their nested spans' ends.
-            with patch.object(FileSpan, 'merge_contiguous_spans', merge_tactic_spans):
+            with (patch.object(FileSpan, 'merge_contiguous_spans', merge_tactic_spans),
+                  patch.object(LeanASTNode, 'get_tokens', tactic_tokens)):
                 lean_file = project.load_file(source, use_cache=False, store_assertion_errors=False)
             transitions = []
             for theorem in lean_file.theorems:
