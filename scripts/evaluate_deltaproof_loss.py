@@ -7,10 +7,12 @@ import math
 import os
 import time
 from pathlib import Path
+from unittest.mock import patch
 
 import torch
 import yaml
 from leantree import LeanProject, StoredError
+from leantree.file_span import FileSpan
 
 from alphaproof.core.config import rl_config_from_dict
 from alphaproof.core.network import Network
@@ -25,6 +27,19 @@ def write_json(path, value):
     temporary = path.with_suffix('.tmp')
     temporary.write_text(json.dumps(value, indent=2) + '\n')
     temporary.replace(path)
+
+
+def merge_tactic_spans(spans, content, should_merge):
+    """Keep enclosing proof spans intact when replacing nested tactics."""
+    merged = []
+    for span in sorted(spans, key=lambda span: span.start):
+        if merged and (span.start <= merged[-1].finish or should_merge(
+                content[merged[-1].finish.offset:span.start.offset])):
+            previous = merged.pop()
+            merged.append(FileSpan(previous.start, max(previous.finish, span.finish)))
+        else:
+            merged.append(span)
+    return merged
 
 
 def prepare(config):
@@ -79,7 +94,9 @@ def extract(dataset, project_path, output):
         if not path.exists():
             source = sources / f'{index:03d}.lean'
             source.write_text(row['verified_proof'])
-            lean_file = project.load_file(source, use_cache=False, store_assertion_errors=False)
+            # LeanTree's merge shortens enclosing spans to their nested spans' ends.
+            with patch.object(FileSpan, 'merge_contiguous_spans', merge_tactic_spans):
+                lean_file = project.load_file(source, use_cache=False, store_assertion_errors=False)
             transitions = []
             for theorem in lean_file.theorems:
                 assert not isinstance(theorem, StoredError), theorem
