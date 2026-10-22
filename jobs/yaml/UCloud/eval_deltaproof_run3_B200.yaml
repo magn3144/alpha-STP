@@ -1,0 +1,18 @@
+# Same 384-theorem set used for the report's AlphaProof and LLM evaluations.
+source_theorems: "${DATA}/dataset/llm_b200_01_validation/source_theorems.json"
+overlap_audit: "${DATA}/dataset/llm_b200_01_validation/overlap_audit.json"
+theorem_count: 384
+output_dir: "${DATA}/runs/eval_deltaproof_run3"
+repo_dir: "${DELTA_PROOF}"
+python: "${DELTA_PROOF}/.venv-ucloud-b200/bin/python"
+lean_project: "${DELTA_PROOF}/lean_project"
+experiment_config: "${ALPHA_STP}/jobs/yaml/UCloud/rl_deltaproof_stp_B200.yaml"
+# Reuse the actual saved run's search settings, including its 64-simulation budget.
+solver_config: "${DATA}/runs/stp_deltaproof_codet5p_770m_b200_1_8_run3_stp_epochs/deltaproof/config_01.json"
+checkpoint_runs:
+  stp: "${DATA}/runs/stp_deltaproof_codet5p_770m_b200_1_8_run3_stp_epochs"
+  expert_iteration: "${DATA}/runs/expert_iteration_deltaproof_codet5p_770m_b200_1_8_run3_stp_epochs"
+rounds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+checkpoint_seed: 0
+starting_checkpoint: "${DELTA_PROOF}/data/runs/sft_codet5p_770m_a100_full_01/network_params.pt"
+baseline_seeds: [0, 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000]

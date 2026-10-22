@@ -17,7 +17,9 @@ output_dir: "${DATA}/runs/eval_llm_b200_01_deltaproof_lean"
 checkpoint_runs:
   stp: "${DATA}/runs/stp_llm_b200-01"
   expert_iteration: "${DATA}/runs/expert_iteration_llm_b200-01"
-rounds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+rounds:
+  stp: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  expert_iteration: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 checkpoint_seed: 0
 starting_model: "${DATA}/runs/sft_stp_paper_deepseek_prover_v1.5_b200/models/bwmpag9m/step-114"
 # Separated seeds keep per-request seed ranges distinct across repetitions.

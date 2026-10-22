@@ -1,0 +1,26 @@
+# Original 384-theorem AlphaProof validation set, including the three known
+# renamed RL-training duplicates. Results also report the disjoint 381 subset.
+validation_data: "${DATA}/dataset/llm_b200_01_validation/validation.json"
+source_theorems: "${DATA}/dataset/llm_b200_01_validation/source_theorems.json"
+overlap_audit: "${DATA}/dataset/llm_b200_01_validation/overlap_audit.json"
+theorem_count: 384
+samples_per_theorem: 16
+temperature: 1.0
+# STP generation: BF16, 1024 prompt + 1024 completion tokens.
+# Use delta-proof's training Lean/Mathlib environment and import Mathlib header.
+verification:
+  lean_project: "${DELTA_PROOF}/lean_project"
+  lake_path: "${ELAN_HOME}/bin/lake"
+  workers: 24
+  timeout: 300.0
+output_dir: "${DATA}/runs/eval_llm_b200_04_deltaproof_lean"
+checkpoint_runs:
+  stp: "${DATA}/runs/stp_llm_b200-04"
+  expert_iteration: "${DATA}/runs/expert_iteration_llm_b200-04"
+rounds:
+  stp: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  expert_iteration: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+checkpoint_seed: 0
+starting_model: "${DATA}/runs/sft_stp_paper_deepseek_prover_v1.5_b200/models/bwmpag9m/step-114"
+# Separated seeds keep per-request seed ranges distinct across repetitions.
+baseline_seeds: [0, 10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000]

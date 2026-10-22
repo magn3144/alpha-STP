@@ -24,7 +24,7 @@ def evaluation_plan(config):
     evaluations = []
     for label, run_dir in config['checkpoint_runs'].items():
         completed_games = 0
-        for round_id in config['rounds']:
+        for round_id in config['rounds'][label]:
             round_dir = Path(run_dir) / f'round{round_id}'
             assert (round_dir / 'round_complete').is_file(), round_dir
             records = json.loads((round_dir / 'actor_metrics.json').read_text())
@@ -166,6 +166,7 @@ def main(args):
             write_json(summary_path, summary)
         summaries.append(json.loads(summary_path.read_text()))
         export_summary(output_dir, summaries, len(config['baseline_seeds']))
+    (output_dir / 'SUCCESS').touch()
     print(f'Evaluation complete: {output_dir / "summary.csv"}', flush=True)
 
 

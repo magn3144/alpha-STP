@@ -1,0 +1,12 @@
+validation_data: "${DELTA_PROOF}/data/dataset/numina_math_lean_passing_1_8/validation_verified_400.jsonl"
+validation_split: "${DELTA_PROOF}/data/dataset/numina_math_lean_passing_1_8/validation.jsonl"
+training_split: "${DELTA_PROOF}/data/dataset/numina_math_lean_passing_1_8/train.jsonl"
+lean_project: "${DELTA_PROOF}/lean_project"
+output_dir: "${ALPHA_STP}/data/runs/validation_loss_deltaproof_run3_verified400"
+starting_checkpoint: "${DELTA_PROOF}/data/runs/sft_codet5p_770m_a100_full_01/network_params.pt"
+checkpoint_runs:
+  stp: "${ALPHA_STP}/data/runs/stp_deltaproof_codet5p_770m_b200_1_8_run3_stp_epochs"
+  expert_iteration: "${ALPHA_STP}/data/runs/expert_iteration_deltaproof_codet5p_770m_b200_1_8_run3_stp_epochs"
+rounds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+batch_size: 10
+cpu_threads: 8
