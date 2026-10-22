@@ -7,47 +7,19 @@ import math
 import os
 import time
 from pathlib import Path
-from unittest.mock import patch
 
 import torch
 import yaml
-from leantree import LeanProject, StoredError
-from leantree.file_span import FileSpan
-from leantree.repl_adapter.ast_parser import LeanASTLiteral, LeanASTNode
+from transformers import AutoTokenizer
 
 from alphaproof.core.config import rl_config_from_dict
 from alphaproof.core.network import Network
 from alphaproof.training.sft import batch_losses
+from scripts.prepare_deltaproof_validation import EXTRACTION, load_prepared, write_json, write_jsonl
 
 
 def read_jsonl(path):
     return [json.loads(line) for line in path.read_text().splitlines()]
-
-
-def write_json(path, value):
-    temporary = path.with_suffix('.tmp')
-    temporary.write_text(json.dumps(value, indent=2) + '\n')
-    temporary.replace(path)
-
-
-def merge_tactic_spans(spans, content, should_merge):
-    """Keep enclosing proof spans intact when replacing nested tactics."""
-    merged = []
-    for span in sorted(spans, key=lambda span: span.start):
-        if merged and (span.start <= merged[-1].finish or should_merge(
-                content[merged[-1].finish.offset:span.start.offset])):
-            previous = merged.pop()
-            merged.append(FileSpan(previous.start, max(previous.finish, span.finish)))
-        else:
-            merged.append(span)
-    return merged
-
-
-def tactic_tokens(node):
-    """Exclude anonymous syntax metadata from reconstructed calc expressions."""
-    if isinstance(node, LeanASTLiteral):
-        return [] if node.value == '`[anonymous]' else [node.pretty_print()]
-    return [token for child in node.get_children() for token in tactic_tokens(child)]
 
 
 def prepare(config):
@@ -73,8 +45,15 @@ def prepare(config):
             games += json.loads((directory / 'round_metrics.json').read_text())['attempts']
             checkpoints.append(dict(run=name, round=round_id, game=games,
                                     checkpoint=str(directory / 'solver_checkpoint.pt')))
+    expected_shapes = None
     for checkpoint in checkpoints:
-        assert Path(checkpoint['checkpoint']).stat().st_size > 0
+        params = torch.load(checkpoint['checkpoint'], map_location='meta', weights_only=True, mmap=True)
+        weights = params if checkpoint['round'] is None else params['network_params']
+        shapes = {key: tuple(value.shape) for key, value in weights.items()}
+        if expected_shapes is None:
+            expected_shapes = shapes
+        assert shapes == expected_shapes, checkpoint['checkpoint']
+        del params, weights
     search = next(iter(saved_configs.values()))
     for saved in saved_configs.values():
         for field in ['tokenizer_model', 'max_state_length', 'max_action_length',
@@ -85,48 +64,11 @@ def prepare(config):
                     metric='reference-proof policy loss + value_weight * proof-depth value loss',
                     aggregation='transition-weighted mean of fixed batches, matching learner evaluation',
                     tokenization='fixed padding and truncation matching RL replay',
-                    value_targets='negative remaining reference proof-tree depth')
+                    extraction=EXTRACTION,
+                    states='single goals recorded during compilation of the original reference proofs',
+                    actions='original tactic source; no rewriting, AST reconstruction, or replay',
+                    value_targets='negative remaining source-tactic graph depth')
     return dataset, checkpoints, search, manifest
-
-
-def extract(dataset, project_path, output):
-    """Cache each complete theorem; require coverage of all 400 theorems."""
-    cache = output / 'theorems'
-    cache.mkdir(exist_ok=True)
-    sources = output / 'sources'
-    sources.mkdir(exist_ok=True)
-    project = LeanProject(project_path)
-    records = []
-    for index, row in enumerate(dataset):
-        path = cache / f'{index:03d}.json'
-        if not path.exists():
-            source = sources / f'{index:03d}.lean'
-            source.write_text(row['verified_proof'])
-            # LeanTree's merge shortens enclosing spans to their nested spans' ends.
-            with (patch.object(FileSpan, 'merge_contiguous_spans', merge_tactic_spans),
-                  patch.object(LeanASTNode, 'get_tokens', tactic_tokens)):
-                lean_file = project.load_file(source, use_cache=False, store_assertion_errors=False)
-            transitions = []
-            for theorem in lean_file.theorems:
-                assert not isinstance(theorem, StoredError), theorem
-                for block in theorem.by_blocks:
-                    assert block.tree is not None and not isinstance(block.tree, StoredError), block.tree
-                    for node in block.tree.get_nodes():
-                        if node.state is None or node.tactic is None:
-                            continue
-                        action = str(node.tactic.tactic).strip()
-                        if 'sorry' in action or 'admit' in action or action == 'bound':
-                            continue
-                        transitions.append(dict(id=row['id'], state=str(node.state),
-                                                action=action, value=-float(node.proof_depth)))
-            assert transitions, row['id']
-            write_json(path, dict(id=row['id'], transitions=transitions))
-        cached = json.loads(path.read_text())
-        assert cached['id'] == row['id']
-        records.extend(cached['transitions'])
-        print(f'Extracted {index + 1}/{len(dataset)} theorems; {len(records)} transitions', flush=True)
-    assert {r['id'] for r in records} == {r['id'] for r in dataset}
-    return records
 
 
 def main():
@@ -136,28 +78,29 @@ def main():
     args = parser.parse_args()
     config = yaml.safe_load(os.path.expandvars(args.config.read_text()))
     dataset, checkpoints, saved, manifest = prepare(config)
-    print(f'{len(dataset)} held-out theorems; {len(checkpoints)} checkpoints', flush=True)
-    if args.prepare_only:
-        return
-    assert torch.cuda.is_available(), 'Submit this job with a GPU.'
     output = Path(config['output_dir'])
-    output.mkdir(parents=True, exist_ok=True)
+    records, prepared = load_prepared(dataset, output, manifest['validation_sha256'])
+    manifest['prepared'] = prepared
+    tokenizer = AutoTokenizer.from_pretrained(saved['tokenizer_model'], local_files_only=True)
+    observations = tokenizer([r['state'] for r in records], max_length=saved['max_state_length'],
+                             padding='max_length', truncation=True, return_tensors='pt').input_ids
+    actions = tokenizer([r['action'] for r in records], max_length=saved['max_action_length'],
+                        padding='max_length', truncation=True, return_tensors='pt').input_ids
+    values = torch.tensor([r['value'] for r in records], dtype=torch.float32)
+    assert observations.shape == (len(records), saved['max_state_length'])
+    assert actions.shape == (len(records), saved['max_action_length'])
+    print(f'Validated {len(dataset)} held-out theorems; {len(records)} transitions; '
+          f'{len(checkpoints)} checkpoint formats', flush=True)
     manifest_path = output / 'manifest.json'
     if manifest_path.exists():
         assert json.loads(manifest_path.read_text()) == manifest, 'Evaluation inputs changed.'
-    else:
+    if args.prepare_only:
+        return
+    assert torch.cuda.is_available(), 'Submit this job with a GPU.'
+    if not manifest_path.exists():
         write_json(manifest_path, manifest)
-    records = extract(dataset, config['lean_project'], output)
-    (output / 'transitions.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in records))
     torch.set_num_threads(config['cpu_threads'])
     network = Network(rl_config_from_dict(saved, 'validation_loss'))
-    observations = network.tokenizer([r['state'] for r in records],
-                                    max_length=network.max_state_length,
-                                    padding='max_length', truncation=True, return_tensors='pt').input_ids
-    actions = network.tokenizer([r['action'] for r in records],
-                               max_length=network.max_action_length,
-                               padding='max_length', truncation=True, return_tensors='pt').input_ids
-    values = torch.tensor([r['value'] for r in records], dtype=torch.float32)
     summaries = []
     for checkpoint in checkpoints:
         name = f"{checkpoint['run']}_round{checkpoint['round']}"
@@ -186,7 +129,7 @@ def main():
                                          theorem_count=len(dataset), transitions=len(records),
                                          seconds=time.time() - started))
         summaries.append(json.loads(result_path.read_text()))
-        (output / 'results.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in summaries))
+        write_jsonl(output / 'results.jsonl', summaries)
         print(f'COMPLETED {name}: {summaries[-1]}', flush=True)
     (output / 'SUCCESS').write_text(f'{len(summaries)} checkpoints completed\n')
 

@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # PyTorch batch mode, one B200; mount master-thesis at /work/master-thesis.
+# Requires completed CPU preparation via prepare_validation_loss_deltaproof_run3.sh.
 source /work/master-thesis/env.sh
 cd "$ALPHA_STP"
 export CUDA_VISIBLE_DEVICES=0
